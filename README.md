@@ -2,7 +2,7 @@
 
 # Flowlace
 
-Flowlace es un planificador de proyectos, entregables, tareas y recursos de Alphazeta Group, ahora como aplicación de escritorio para Windows 10/11 (x64). Tiene dos componentes:
+Flowlace es un planificador de proyectos, entregables, tareas y recursos, ahora como aplicación de escritorio para Windows 10/11 (x64). Tiene dos componentes:
 
 | Componente | Entregable | Para quién |
 |---|---|---|
