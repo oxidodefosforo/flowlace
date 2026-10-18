@@ -1,0 +1,56 @@
+# Builds Flowlace on Windows and publishes the downloads as a GitHub Release.
+# Runs when a version tag is pushed (git tag v1.0.1 && git push origin v1.0.1),
+# or by hand from the Actions tab ("Run workflow") for the tag given there.
+name: Build and release (Windows)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install dependencies (exact versions from package-lock.json)
+        run: npm ci
+      - name: Tests (database and server)
+        run: npm test
+        continue-on-error: true
+      - name: Build installer (Squirrel) and portable zip
+        run: npm run make:win
+      - name: Build Flowlace Server package
+        run: npm run server:dist
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: Flowlace ${{ env.TAG }}
+          body: |
+            **Descargas**
+
+            - **FlowlaceSetup.exe**: instalador de Flowlace para Windows 10/11 (64 bits). Ejecútalo en cada computadora; no requiere permisos de administrador.
+            - **FlowlaceServer-*-win-x64.zip**: Flowlace Server, solo para el modo *Company workspace*. Se instala una vez en la máquina servidor (ver `docs/SERVIDOR.md`).
+            - **Flowlace-win32-x64-*.zip**: versión portátil, sin instalar.
+
+            El instalador no está firmado: Windows SmartScreen puede mostrar un aviso (*Más información → Ejecutar de todas formas*).
+            Guía de uso: `docs/GUIA.md`.
+          files: |
+            out/make/squirrel.windows/x64/FlowlaceSetup.exe
+            out/make/zip/win32/x64/*.zip
+            out/server/FlowlaceServer-*-win-x64.zip
