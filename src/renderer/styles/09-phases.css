@@ -1,0 +1,56 @@
+/* Flowlace renderer styles — extracted from the web build; edit here. */
+/* ---------- v4: phases ---------- */
+.err{font-style:normal;color:var(--danger);font-size:12.5px}.err:empty{display:none}
+.more-btn svg{margin-left:2px}
+.pb{position:absolute;border-radius:4px;background:color-mix(in srgb,var(--c) 30%,var(--surface));box-shadow:inset 0 0 0 1.5px var(--c);cursor:grab;touch-action:none;z-index:1;display:flex;align-items:center;min-width:6px;overflow:hidden}
+.pb .pbl{font-size:10.5px;font-weight:600;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px;line-height:1;pointer-events:none;min-width:0;flex:1}
+.pb .pt{font-weight:700;margin-right:3px}
+.pb .pt.late{color:var(--danger)}
+.pb.ns{background:color-mix(in srgb,var(--c) 14%,var(--surface))}
+.pb.done{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--c) 28%,var(--surface)) 0 4px,var(--surface) 4px 8px)}
+.pb.hold{background:color-mix(in srgb,var(--c) 12%,var(--surface));box-shadow:none;border:1.5px dashed var(--c)}
+.pb.late{box-shadow:inset 0 0 0 1.5px var(--c),0 0 0 2px var(--danger)}
+.pb.xl{border-top-left-radius:0;border-bottom-left-radius:0}
+.pb.xr{border-top-right-radius:0;border-bottom-right-radius:0}
+.pb .cont{flex:none;font-size:11px;font-weight:700;color:var(--c);padding:0 2px;line-height:1;pointer-events:none;filter:brightness(.8)}
+.pb .h{position:absolute;top:0;bottom:0;width:7px;cursor:ew-resize}
+.pb .hl{left:0}.pb .hr{right:0}
+.pb:hover .h::after,.pb:focus-visible .h::after{content:"";position:absolute;top:3px;bottom:3px;left:2px;width:2px;border-radius:1px;background:var(--fg);opacity:.5}
+.pb:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.pb.sel{outline:2px solid var(--fg);outline-offset:1px}
+.pb.dragging{cursor:grabbing;opacity:.85;z-index:5}
+.mk{z-index:3}
+.tl-track .mk{margin-top:-10px}
+.tl-track .mk.small{margin-top:-7px}
+.cl{margin-top:-10px}
+.tl-row.na .tl-label{opacity:.6}
+.pb-note{position:absolute;left:8px;top:6px;font-size:11px;color:var(--muted)}
+.unsch{position:absolute;left:6px;top:4px;height:18px;padding:0 8px;border:1px dashed var(--line-2);border-radius:9px;background:var(--surface);font-size:11px;color:var(--muted);cursor:pointer}
+.unsch:hover{color:var(--fg);border-color:var(--fg)}
+.lg-bar{width:20px;height:9px;border-radius:2px;background:color-mix(in srgb,var(--c) 30%,var(--surface));box-shadow:inset 0 0 0 1.5px var(--c)}
+.lg-bar.done{background:repeating-linear-gradient(135deg,var(--line-2) 0 3px,var(--surface) 3px 6px)}
+.lg-bar.hold{box-shadow:none;border:1.5px dashed var(--muted);background:none}
+.sugrow td{background:var(--accent-soft)!important;font-size:12.5px}
+.sugrow .btn{margin-left:6px}
+.sugbox{padding:8px 10px;border-radius:6px;background:var(--accent-soft);font-size:12.5px}
+.defl{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;font-size:12.5px}
+.defl dt{color:var(--muted)}
+.defl dd{margin:0;white-space:pre-wrap}
+.checklist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.checklist .chk{font-size:13px}
+.msref{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.phcard{border:1px solid var(--line);border-radius:8px;background:var(--surface);margin-bottom:8px}
+.phcard>summary{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;list-style:none}
+.phcard>summary::-webkit-details-marker{display:none}
+.phcard>summary::before{content:"›";font-weight:700;color:var(--muted);transition:transform .12s;display:inline-block}
+.phcard[open]>summary::before{transform:rotate(90deg)}
+.phcard>summary .meta{margin-left:auto;font-size:12px;color:var(--muted)}
+.phbody{padding:4px 14px 14px;border-top:1px solid var(--line)}
+.fgrid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px;padding-top:10px}
+.fgrid3 .span2{grid-column:1/-1}
+.msbox{border:1px solid var(--line);border-radius:6px;padding:4px 12px 10px;margin-top:8px;background:var(--surface-2)}
+.msbox .fgrid3{padding-top:6px}
+input[type=color]{width:34px;height:30px;padding:0 2px;border:1px solid var(--line-2);border-radius:5px;background:var(--surface);cursor:pointer;flex:none}
+@media (max-width:900px){.fgrid3{grid-template-columns:minmax(0,1fr)}}
+
+#main:focus,#main:focus-visible,[tabindex="-1"]:focus,[tabindex="-1"]:focus-visible{outline:none}

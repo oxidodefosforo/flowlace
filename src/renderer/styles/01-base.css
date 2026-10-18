@@ -1,0 +1,40 @@
+/* Flowlace renderer styles — extracted from the web build; edit here. */
+/* Layout: thin title bar; split workspace = scrollable work area (left) + right details panel (~50%) with independent scroll */
+:root{
+  --bg:#F3F4F7; --surface:#FFFFFF; --surface-2:#F1F3F6; --surface-3:#E6E9EE; --line:#E0E4EA; --line-2:#C9D0DA;
+  --fg:#16202C; --fg-2:#3A4555; --muted:#667085; --accent:#1F5FAD; --accent-soft:#E7EEF8; --accent-fg:#FFFFFF;
+  --danger:#C2362B; --danger-soft:#FCE8E6; --ok:#287548; --ok-soft:#E2F1E7; --warn:#935E00; --warn-soft:#FBF0D9;
+  --weekend:rgba(22,32,44,.035); --today:#1F5FAD; --shadow:0 12px 32px rgba(16,24,40,.18); --panel-shadow:-10px 0 28px rgba(16,24,40,.07);
+  --f-display:'IBM Plex Sans Condensed','Arial Narrow',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  --labelw:310px; --r:6px; --toph:50px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F141B; --surface:#161C25; --surface-2:#1C2430; --surface-3:#242E3B; --line:#28323F; --line-2:#3A4656;
+  --fg:#E5E9EF; --fg-2:#C3CAD5; --muted:#94A0B1; --accent:#70A4E8; --accent-soft:#1B2A3E; --accent-fg:#0F141B;
+  --danger:#F0766B; --danger-soft:#3A1E1D; --ok:#6CC08B; --ok-soft:#183024; --warn:#E3AA4E; --warn-soft:#33270F;
+  --weekend:rgba(255,255,255,.025); --today:#70A4E8; --shadow:0 12px 32px rgba(0,0,0,.5); --panel-shadow:-10px 0 28px rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F141B; --surface:#161C25; --surface-2:#1C2430; --surface-3:#242E3B; --line:#28323F; --line-2:#3A4656;
+  --fg:#E5E9EF; --fg-2:#C3CAD5; --muted:#94A0B1; --accent:#70A4E8; --accent-soft:#1B2A3E; --accent-fg:#0F141B;
+  --danger:#F0766B; --danger-soft:#3A1E1D; --ok:#6CC08B; --ok-soft:#183024; --warn:#E3AA4E; --warn-soft:#33270F;
+  --weekend:rgba(255,255,255,.025); --today:#70A4E8; --shadow:0 12px 32px rgba(0,0,0,.5); --panel-shadow:-10px 0 28px rgba(0,0,0,.35); color-scheme:dark}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:13.5px;line-height:1.45;overflow:hidden}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;margin:0;text-wrap:balance}
+h1{font-size:21px;line-height:1.2}
+h2{font-size:16px}
+h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+p{margin:0}
+a{color:var(--accent)}
+.muted{color:var(--muted)}
+.mono,.code{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sr{position:absolute;left:0;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+.spacer{flex:1}
+

@@ -1,0 +1,27 @@
+/* Flowlace renderer styles — extracted from the web build; edit here. */
+/* ---------- responsive ---------- */
+@media (max-width:1200px){.ws.has-panel{grid-template-columns:minmax(0,1fr) min(50vw,560px)}.sgrid2{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:900px){
+  .ws.has-panel{grid-template-columns:minmax(0,1fr)}
+  #panel{position:fixed;inset:0;z-index:50;padding-top:env(safe-area-inset-top,0px)}
+  .ws.has-panel{--labelw:200px}
+  .sgrid{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:700px){
+  :root{--labelw:170px}
+  .brand>span:not(.mark),.save-ind span{display:none}
+  .top{gap:6px}
+  .nav{min-width:0;overflow-x:auto}
+  .nav button{padding:0 6px;font-size:12.5px}
+  .top .newp{display:none}
+  .tlx{overflow-x:auto}
+  .tlx .tl{min-width:640px}
+  .tl-head{top:0}
+  .tl-l1 .ex{display:none}
+  .ks .n::before{display:none}
+  .fgrid{grid-template-columns:minmax(0,1fr)}
+  .filters .in{max-width:none;flex:1 1 140px}
+  .link-row{grid-template-columns:minmax(0,1fr) auto auto}
+  .link-row .lbl-in{grid-column:1/-1}
+}
+

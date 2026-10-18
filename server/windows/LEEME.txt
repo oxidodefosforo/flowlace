@@ -1,0 +1,20 @@
+FLOWLACE SERVER — Windows 10/11 o Windows Server 2016+ (64 bits)
+
+Este paquete es el servicio que comparte los espacios de trabajo "Company" de Flowlace en la red de la
+empresa. Debe ejecutarse en una computadora con Windows que permanezca encendida (un servidor o un equipo
+dedicado). Una carpeta compartida o un NAS que solo almacena archivos NO puede ejecutar este servicio.
+
+Contenido
+  node\node.exe            motor Node.js (incluido; no hay que instalar nada más)
+  app\                     programa de Flowlace Server
+  FlowlaceServer.exe/.xml  contenedor de servicio de Windows (WinSW)
+  flowlace-server.cmd      línea de comandos (usuarios, comprobaciones)
+  install-service.ps1      instalación completa como servicio
+  service-control.ps1      iniciar, detener, estado, actualizar, desinstalar
+  docs\SERVIDOR.md         guía completa (HTTPS, certificados, firewall, backups, restauración)
+
+Instalación rápida (PowerShell como administrador, dentro de esta carpeta):
+  Set-ExecutionPolicy -Scope Process Bypass
+  .\install-service.ps1 -DataDir D:\FlowlaceData -CertificatePfx C:\certs\flowlace.pfx
+
+Después, en cada computadora: Flowlace → Company workspace → dirección https://NOMBRE-SERVIDOR:8443

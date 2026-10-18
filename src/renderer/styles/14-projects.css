@@ -1,0 +1,86 @@
+/* Flowlace renderer styles — extracted from the web build; edit here. */
+/* ---------- v15: Resources cell “+”, Projects ⋯ menu, services, project panel ---------- */
+.rs td.rc .rci{padding:0 15px 0 2px}
+.rc-add{position:absolute;right:1px;top:50%;transform:translateY(-50%);width:14px;height:18px;padding:0;border:0;border-radius:3px;background:none;color:var(--muted);opacity:.55;font:600 13px/18px var(--font,inherit);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.rc-add:hover,.rc-add:focus-visible{opacity:1;color:var(--accent);background:var(--surface-2)}
+.rc:focus-within .rc-add{opacity:.85}
+.rowmenu{position:fixed;right:auto;top:0;margin:0;min-width:150px;z-index:80}
+.iconbtn.rowmore{font-size:17px;line-height:1;width:30px;height:28px;letter-spacing:1px}
+.iconbtn.rowmore[aria-expanded="true"]{background:var(--surface-2)}
+.tbl td.act{text-align:right}
+tr.prow{cursor:pointer}
+tr.prow:hover>td{background:var(--surface-2)}
+tr.prow.sel>td{background:var(--accent-soft,rgba(31,95,173,.09))}
+tr.prow.sel>td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.popen{display:flex;gap:8px;align-items:baseline;text-align:left;font:inherit;color:inherit;cursor:pointer;padding:0}
+.popen .pnm{color:var(--accent);font-weight:600;white-space:normal}
+.popen:hover .pnm{text-decoration:underline}
+.svc-t{display:block;overflow:hidden;text-overflow:ellipsis}
+.svc-dd{position:relative}
+.svc-btn{display:flex;align-items:center;gap:6px;width:100%;text-align:left;cursor:pointer;min-height:34px}
+.svc-v{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.svc-c{color:var(--muted);font-size:11px}
+.svc-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:70;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;box-shadow:var(--shadow);padding:6px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:2px 8px;max-height:260px;overflow:auto}
+.svc-list .chk{padding:5px 6px;border-radius:5px;display:flex;gap:7px;align-items:center}
+.svc-list .chk:hover{background:var(--surface-2)}
+.svc-list .svc-h{grid-column:1/-1;margin:4px 2px 0}
+.pp-sum{border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:7px;margin-bottom:6px;background:var(--surface-2)}
+.pp-meta{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.pp-sum .k,.phd-svc .k{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-right:4px}
+.pp-line{line-height:1.45}
+.pp-counts{display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--fg-2,inherit);font-size:13px}
+.pp-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:3px}
+.pn-title{white-space:normal;overflow-wrap:anywhere}
+/* ---------- v16: Projects table with user widths (colgroup + table-layout fixed) and per-column wrap ---------- */
+.pj-shell{--pw-proj:260px;--pw-svc:170px;--pw-pm:150px;--pw-status:128px;--pw-deliv:96px;--pw-tasks:96px;--pw-due:190px;--pw-act:48px}
+.tbl.pj{table-layout:fixed;width:1px}
+.twrap.pj-shell{width:fit-content;max-width:100%}
+.pj col.pk-proj{width:var(--pw-proj)}.pj col.pk-svc{width:var(--pw-svc)}.pj col.pk-pm{width:var(--pw-pm)}.pj col.pk-status{width:var(--pw-status)}
+.pj col.pk-deliv{width:var(--pw-deliv)}.pj col.pk-tasks{width:var(--pw-tasks)}.pj col.pk-due{width:var(--pw-due)}.pj col.pk-act{width:var(--pw-act)}
+.pj th,.pj td{min-width:0;max-width:none;overflow:hidden;white-space:normal;overflow-wrap:break-word;box-sizing:border-box}
+.pj th{white-space:normal}
+.pj td select,.pj td input,.pj .pp,.pj .person-select{width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.pj .pp{display:block}
+.pj .tblname{min-width:0;padding-left:6px}
+.pj .popen{min-width:0;max-width:100%;flex-wrap:wrap;column-gap:8px;row-gap:0}
+.pj .popen .pnm{min-width:0;overflow-wrap:break-word}
+.pj.nw-proj .popen{flex-wrap:nowrap}
+.pj.nw-proj .popen .pnm,.pj.nw-proj .popen .code{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pj.nw-proj .popen .code{flex:none}
+.pj .c-svc .svc-t{white-space:normal}
+.pj.nw-svc .c-svc .svc-t{white-space:nowrap}
+.pj.nw-pm td.c-pm,.pj.nw-status td.c-status,.pj.nw-deliv td.c-deliv,.pj.nw-tasks td.c-tasks,.pj.nw-due td.c-due{white-space:nowrap;text-overflow:ellipsis}
+.pj td.c-act{padding-left:2px;padding-right:4px}
+.pj .rowmore{max-width:100%}
+tr.trow{cursor:pointer}
+tr.trow:hover>td{background:var(--surface-2)}
+tr.prow:focus-visible,tr.trow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+/* ---------- v17: Table settings above the counter, right-aligned (Projects, Tasks); Tasks table widths ---------- */
+.toolbar.tb-meta{align-items:flex-end;row-gap:6px}
+.tmeta{display:flex;flex-direction:column;align-items:flex-end;gap:1px;margin-left:auto;text-align:right;flex:none}
+.tmeta .btn{margin-right:-4px}
+.tmeta .tcount{font-size:12.5px;white-space:nowrap}
+.rs-week #rs-tset-btn{margin-left:0}
+.tk-shell{--tw-name:280px;--tw-project:200px;--tw-deliverable:170px;--tw-assignee:150px;--tw-status:150px;--tw-due:150px;--tw-priority:100px;--tw-phase:160px;--tw-service:130px;--tw-source:130px;--tw-updated:110px;--tw-created:110px}
+.twrap.tk-shell{width:fit-content;max-width:100%}
+.tbl.tt{table-layout:fixed;width:1px}
+.tt col.tk-ck{width:36px}.tt col.tk-open{width:76px}
+.tt col.tk-name{width:var(--tw-name)}.tt col.tk-project{width:var(--tw-project)}.tt col.tk-deliverable{width:var(--tw-deliverable)}.tt col.tk-assignee{width:var(--tw-assignee)}
+.tt col.tk-status{width:var(--tw-status)}.tt col.tk-due{width:var(--tw-due)}.tt col.tk-priority{width:var(--tw-priority)}.tt col.tk-phase{width:var(--tw-phase)}
+.tt col.tk-service{width:var(--tw-service)}.tt col.tk-source{width:var(--tw-source)}.tt col.tk-updated{width:var(--tw-updated)}.tt col.tk-created{width:var(--tw-created)}
+.tt th,.tt td{min-width:0!important;overflow:hidden;white-space:normal;overflow-wrap:break-word;box-sizing:border-box}
+.tt td select,.tt td input:not([type=checkbox]),.tt .pp,.tt .person-select,.tt .dwrap,.tt .dfield{min-width:0!important;max-width:100%;box-sizing:border-box}
+.tt td select,.tt .pp,.tt .person-select{width:100%}
+.tt .pp{display:block}
+.tt .pcell{min-width:0}
+.tt.nw-project .pcell,.tt.nw-project .pcell *,.tt.nw-deliverable td.c-deliverable,.tt.nw-deliverable td.c-deliverable *,.tt.nw-phase td.c-phase,.tt.nw-phase td.c-phase *,.tt.nw-due td.c-due>div{white-space:nowrap;flex-wrap:nowrap;text-overflow:ellipsis;overflow:hidden}
+.tt.nw-assignee td.c-assignee,.tt.nw-status td.c-status,.tt.nw-priority td.c-priority,.tt.nw-service td.c-service,.tt.nw-source td.c-source,.tt.nw-updated td.c-updated,.tt.nw-created td.c-created{white-space:nowrap;text-overflow:ellipsis}
+.tt td.c-updated,.tt td.c-created{white-space:normal}
+.tt.nw-updated td.c-updated,.tt.nw-created td.c-created{white-space:nowrap}
+.tt .nmrow{min-width:0}
+.tt .nmrow input{min-width:0;width:100%}
+textarea.tnm-wrap{flex:1;min-width:0;width:100%;resize:none;overflow:hidden;field-sizing:content;font:inherit;line-height:1.35;padding:4px 6px;border:1px solid transparent;border-radius:5px;background:transparent;color:inherit;min-height:28px;box-sizing:border-box}
+textarea.tnm-wrap:hover{border-color:var(--line-2)}
+textarea.tnm-wrap:focus{border-color:var(--accent);background:var(--surface);outline:2px solid var(--accent);outline-offset:-1px}
+.tr-done textarea.tnm-wrap{color:var(--muted);text-decoration:line-through}
+@media (max-width:700px){.tmeta{margin-left:auto}}

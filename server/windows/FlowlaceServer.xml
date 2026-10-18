@@ -1,0 +1,25 @@
+<!-- Windows service definition for Flowlace Server (WinSW 2.12, MIT licence: https://github.com/winsw/winsw).
+     install-service.ps1 installs it; Windows then starts the service at boot without anyone signed in.
+     %BASE% is the folder that contains FlowlaceServer.exe (the installation folder). -->
+<service>
+  <id>FlowlaceServer</id>
+  <name>Flowlace Server</name>
+  <description>Shared Flowlace workspaces for the company network (HTTPS API and live updates). Only this service opens the SQLite databases.</description>
+  <executable>%BASE%\node\node.exe</executable>
+  <arguments>--disable-warning=ExperimentalWarning "%BASE%\app\server\src\index.js" serve --config "%ProgramData%\Flowlace Server\flowlace-server.json"</arguments>
+  <workingdirectory>%BASE%</workingdirectory>
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+  <!-- restart automatically if the process stops unexpectedly -->
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="30 sec"/>
+  <onfailure action="restart" delay="60 sec"/>
+  <resetfailure>1 hour</resetfailure>
+  <!-- on "Stop", Ctrl+C is sent first so the databases are closed cleanly -->
+  <stoptimeout>20 sec</stoptimeout>
+  <logpath>%ProgramData%\Flowlace Server\logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>8</keepFiles>
+  </log>
+</service>

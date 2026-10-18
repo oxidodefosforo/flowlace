@@ -1,0 +1,73 @@
+/* Desktop additions: start screen, connection banner, save status, conflict review, read-only company settings. */
+.save-ind{border:0;background:none;padding:2px 4px;border-radius:4px;cursor:pointer}
+.save-ind:hover{background:var(--surface-2)}
+.save-ind.bad{color:var(--danger);font-weight:600}
+.ok-t{color:var(--ok)}
+
+/* connection / saving banner: bottom-left, above the content, never moves the layout or covers headers */
+.ms-banner{position:fixed;left:16px;bottom:16px;z-index:60;max-width:min(640px,calc(100vw - 32px));
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--r);border:1px solid var(--line-2);background:var(--surface);box-shadow:var(--shadow);font-size:13px}
+.ms-banner.bad{border-color:var(--danger);background:var(--danger-soft)}
+.ms-banner.warn{border-color:var(--warn);background:var(--warn-soft)}
+.ms-banner.info{border-color:var(--line-2);background:var(--accent-soft)}
+
+/* start screen */
+body.ms-start-open #app{visibility:hidden}
+#ms-start{position:fixed;inset:0;z-index:80;overflow:auto;background:var(--bg)}
+.st-wrap{max-width:980px;margin:0 auto;padding:44px 28px 28px}
+.st-brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.st-brand .logo{height:34px;width:auto}
+.st-name{font-family:var(--f-display);font-size:24px;font-weight:700;letter-spacing:.01em}
+.st-sub{color:var(--muted)}
+.st-body h1{font-size:24px;margin:6px 0 16px}
+.st-body h2{margin:0 0 6px}
+.st-body.busy{opacity:.6;pointer-events:none}
+.st-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.st-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 18px 16px;display:flex;flex-direction:column}
+.st-card p{color:var(--fg-2);margin:4px 0 14px;flex:1}
+.st-kind{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:4px}
+.st-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.st-h3{margin:26px 0 8px}
+.st-recent{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.st-recent li{display:flex;align-items:center;gap:8px;padding:6px 8px;border-top:1px solid var(--line)}
+.st-recent li:first-child{border-top:0}
+.st-recent .plainbtn{display:flex;gap:8px;align-items:baseline;text-align:left;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.st-form{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0;max-width:640px;display:flex;flex-direction:column;gap:10px}
+.st-l{display:flex;flex-direction:column;gap:4px;font-weight:500}
+.st-row{display:flex;gap:8px;align-items:center}
+.st-path{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 8px;border:1px dashed var(--line-2);border-radius:var(--r);background:var(--surface-2)}
+.st-err{color:var(--danger);font-weight:500;margin:6px 0}
+.st-msg{color:var(--ok);margin:6px 0}
+.st-ok{margin:6px 0;padding:8px 10px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line);max-width:640px}
+.st-problem{background:var(--surface);border:1px solid var(--danger);border-radius:10px;padding:14px 16px;max-width:760px}
+.st-problem p{margin:4px 0}
+.st-foot{color:var(--muted);font-size:12px;margin-top:34px}
+
+/* Workspace & Storage */
+.ws-grid{align-items:start}
+.ws-dl{grid-template-columns:130px 1fr}
+.ws-dl dd{overflow-wrap:anywhere}
+.span2{grid-column:1/-1}
+.act-list{list-style:none;margin:0;padding:0;max-height:300px;overflow:auto;font-size:12.5px}
+.act-list li{padding:4px 0;border-top:1px solid var(--line)}
+.act-list li:first-child{border-top:0}
+.act-list .num{color:var(--muted);margin-right:6px}
+.bk-tbl td{vertical-align:top}
+.bk-tbl td.num{white-space:nowrap}
+.imp-tbl td,.imp-tbl th{padding:4px 8px}
+.imp-opt{border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;margin:10px 0}
+.imp-opt legend{font-weight:600;padding:0 4px}
+.ro-box{opacity:.72}
+.ro-note{margin-bottom:10px}
+
+/* conflict review */
+.cf-list{max-height:min(56vh,560px);overflow:auto;display:flex;flex-direction:column;gap:12px;margin:10px 0}
+.cf-item{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--surface)}
+.cf-item h3{text-transform:none;letter-spacing:0;font-size:14px;color:var(--fg);margin-bottom:2px}
+.cf-tbl{font-size:12.5px;margin:6px 0}
+.cf-tbl td{vertical-align:top;max-width:280px;overflow-wrap:anywhere}
+.cf-choice{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.busy-p{display:flex;align-items:center;gap:10px}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--line-2);border-top-color:var(--accent);animation:ms-spin .8s linear infinite}
+@keyframes ms-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.spin{animation:none}}

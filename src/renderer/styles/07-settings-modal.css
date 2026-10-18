@@ -1,0 +1,41 @@
+/* Flowlace renderer styles — extracted from the web build; edit here. */
+/* ---------- settings ---------- */
+.sgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.panelbox{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:14px}
+.panelbox+.panelbox{margin-top:14px}
+.panelbox>h2{margin-bottom:8px}
+.slist{display:flex;flex-direction:column}
+.srow{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:0}
+.srow .grow{flex:1;min-width:0}
+.srow .meta{font-size:12px;color:var(--muted);white-space:nowrap}
+.srow input[type=color]{width:32px;height:28px;padding:0 2px;border:1px solid var(--line-2);border-radius:5px;background:var(--surface);cursor:pointer;flex:none}
+.addrow{display:flex;gap:8px;margin-top:10px}
+.note{font-size:12.5px;color:var(--muted)}
+.note strong{color:var(--fg)}
+.data-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+
+/* ---------- modal ---------- */
+#modal-root:empty{display:none}
+.mb{position:fixed;inset:0;z-index:70;background:rgba(10,14,20,.42);display:flex;align-items:flex-start;justify-content:center;padding:max(48px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));overflow:auto}
+.modal{width:100%;max-width:520px;background:var(--surface);border-radius:10px;box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:12px}
+.modal.wide{max-width:860px}
+.m-head{display:flex;align-items:flex-start;gap:12px}
+.m-head>div{flex:1;min-width:0}
+.x{width:30px;height:30px;border:0;background:none;border-radius:6px;cursor:pointer;font-size:20px;line-height:1;color:var(--muted)}
+.x:hover{background:var(--surface-2);color:var(--fg)}
+.m-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
+.m-actions .sp{flex:1}
+.cmsg{display:flex;flex-direction:column;gap:6px}
+.isslist{margin:4px 0 8px;padding-left:20px;max-height:220px;overflow:auto;font-size:12.5px}
+.tpl-tbl tr.off td:not(:first-child){opacity:.4}
+textarea.code-area{font-family:var(--f-mono);font-size:12px;width:100%;min-height:180px}
+
+/* ---------- toasts ---------- */
+#toasts{position:fixed;z-index:95;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;width:max-content;max-width:calc(100vw - 32px)}
+.toast{background:var(--fg);color:var(--bg);padding:7px 8px 7px 12px;border-radius:7px;font-size:13px;box-shadow:var(--shadow);display:flex;gap:10px;align-items:center;pointer-events:auto}
+.toast.err{background:var(--danger);color:#fff}
+.toast button{border:1px solid currentColor;background:none;color:inherit;border-radius:5px;height:24px;padding:0 9px;cursor:pointer;font-weight:600;font-size:12.5px}
+@media (prefers-reduced-motion:no-preference){.toast{animation:tin .15s ease-out}}
+@keyframes tin{from{transform:translateY(5px);opacity:.3}to{transform:none;opacity:1}}
+

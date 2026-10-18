@@ -1,0 +1,47 @@
+/* Flowlace renderer styles — extracted from the web build; edit here. */
+/* ---------- Calendar ---------- */
+.calbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:2px 0 10px}
+.caltitle{font-size:16px;margin:0 0 0 6px}
+.cal{border:1px solid var(--line);border-radius:8px;background:var(--surface);overflow:hidden}
+.cal-hd{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));background:var(--surface-2);border-bottom:1px solid var(--line)}
+.cal-hd>div{padding:6px 8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.cal-wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line)}
+.cal-wk:last-child{border-bottom:0}
+.cal-day{min-width:0;min-height:96px;padding:4px 5px 6px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:3px}
+.cal-day:last-child{border-right:0}
+.cal.week .cal-day{min-height:260px}
+.cal-day.we{background:var(--weekend)}
+.cal-day.out{background:var(--surface-2)}.cal-day.out .cal-dn{color:var(--muted);opacity:.7}
+.cal-dn{font-size:11.5px;color:var(--fg-2);display:flex;align-items:center;gap:4px}
+.cal-day.today .cal-dn b{background:var(--today);color:#fff;border-radius:9px;padding:0 6px}
+.tday{font-size:10px;color:var(--today);font-weight:600}
+.cev{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;text-align:left;border:1px solid var(--line);border-left:3px solid var(--c);border-radius:5px;background:color-mix(in srgb,var(--c) 9%,var(--surface));padding:3px 5px;cursor:pointer;font:inherit;color:var(--fg);line-height:1.25}
+.cev:hover{border-color:var(--c)}
+.cev-p{font-size:10.5px;color:var(--fg-2);font-weight:600;overflow-wrap:anywhere;word-break:break-word}
+.cev-p .mono{font-weight:500;color:var(--muted)}
+.cev-t{font-size:12px;overflow-wrap:anywhere;word-break:break-word;border-top:1px dashed color-mix(in srgb,var(--c) 35%,transparent);padding-top:1px;width:100%}
+.tev .cev-t{border-top:0}
+.cev-s{font-size:10.5px;color:var(--muted)}
+.cev.over .cev-t{color:var(--danger)}
+.cev-ov{display:inline-grid;place-items:center;width:13px;height:13px;border-radius:50%;background:var(--danger);color:#fff;font-size:9px;font-style:normal;font-weight:700;margin-right:3px;vertical-align:1px}
+.cev.done{opacity:.6}.cev.done .cev-t{text-decoration:line-through}
+.cal-more{border:0;background:none;color:var(--accent);font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;text-align:left;padding:1px 2px}
+.cal-nd{margin-top:12px;border:1px dashed var(--line-2);border-radius:8px;padding:8px 10px;background:var(--surface)}
+.cal-nd h3{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--fg-2);margin:0 0 6px}
+.cal-nd-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px}
+.calpop{width:300px;max-height:min(70vh,520px);overflow:auto}
+.calpop-list{display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.pstrip{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:8px 10px;margin-bottom:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:12.5px}
+.pstrip-n{font-size:14px;text-align:left;overflow-wrap:anywhere}
+.pstrip .k,.phd-next .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-right:3px}
+.phd-next{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px}
+#proj-h1{overflow-wrap:anywhere}
+@media (max-width:700px){.cal-day{min-height:70px;padding:3px}.cal-hd>div{padding:4px 3px;font-size:9.5px}.cev-p{font-size:9.5px}.cev-t{font-size:11px}.cal.week .cal-wk{grid-template-columns:1fr}.cal.week .cal-hd{display:none}.cal.week .cal-day{min-height:0;border-right:0;border-bottom:1px solid var(--line)}}
+/* Resources quick task */
+.rs-qtbar{display:inline-flex;align-items:center;gap:6px}
+.rs-ctx{font-size:12px;color:var(--fg-2);font-variant-numeric:tabular-nums;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.qtpop{width:320px;max-height:calc(100vh - 16px);overflow:auto}
+.qt-ctx{font-size:12.5px;line-height:1.35;margin:2px 0 6px;overflow-wrap:anywhere}
+.qt-more{display:flex;flex-direction:column;gap:6px}
+.qt-more[hidden]{display:none}
+.qt-mb{align-self:flex-start;font-size:12px}

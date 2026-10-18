@@ -1,0 +1,41 @@
+/* Flowlace renderer styles — extracted from the web build; edit here. */
+/* ---------- tables ---------- */
+.twrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:7px 8px;border-bottom:1px solid var(--line-2);white-space:nowrap;background:var(--surface);position:sticky;top:-16px;z-index:2}
+.tbl th button{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer}
+.tbl th button:hover{color:var(--fg)}
+.tbl td{padding:4px 8px;border-bottom:1px solid var(--line);vertical-align:middle;height:36px}
+.tbl tbody tr:last-child td{border-bottom:0}
+.tbl tbody tr:hover td{background:color-mix(in srgb,var(--accent) 3%,var(--surface))}
+.tbl tr.sel td{background:var(--accent-soft)!important}
+.tbl tr.r-over td:first-child{box-shadow:inset 3px 0 0 var(--danger)}
+.tbl .num{text-align:right}
+.tbl .nowrap{white-space:nowrap}
+.tbl .act{white-space:nowrap;text-align:right;width:1%}
+.tbl.edit input:not([type=date]):not([type=checkbox]),.tbl.edit select{height:28px;border:1px solid transparent;background:transparent;border-radius:5px;padding:0 6px;width:100%;min-width:0;font-size:13px}
+.tbl.edit input:not([type=date]):not([type=checkbox]):hover,.tbl.edit select:hover{border-color:var(--line-2)}
+.tbl.edit input:not([type=date]):not([type=checkbox]):focus,.tbl.edit select:focus{border-color:var(--accent);background:var(--surface);outline:2px solid var(--accent);outline-offset:-1px}
+.tbl.edit .dfield{border-color:transparent;background:transparent;min-width:104px;height:28px}
+.tbl.edit .dfield:hover{border-color:var(--line-2)}
+.tbl input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent)}
+.tbl .ck{width:30px;padding-right:0;text-align:center}
+.pcell{display:flex;flex-direction:column;min-width:0;line-height:1.3}
+.pcell .code{font-size:11px;color:var(--muted)}
+.tname{position:relative}
+.tname .nmrow{display:flex;align-items:center;gap:4px}
+.tname .nmrow input{flex:1}
+.prio-hi{color:var(--danger);font-size:11px;font-weight:700;flex:none}
+.cell-sub{font-size:11.5px;color:var(--muted);padding:0 6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.tr-done .tname input{color:var(--muted);text-decoration:line-through}
+.newrow td{background:var(--surface-2)}
+.newrow .nr{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.newrow .nr .in{width:auto}
+.newrow .nr .nm{flex:1 1 220px}
+.newrow .nr select.in{min-width:220px;border-color:var(--line-2)!important;background:var(--surface)!important}
+.openb{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 7px;border:1px solid transparent;border-radius:5px;background:none;color:var(--muted);cursor:pointer;font-size:12px;font-weight:500}
+.openb:hover,.openb:focus-visible{border-color:var(--line-2);color:var(--fg);background:var(--surface)}
+.ferr{position:absolute;left:6px;top:100%;margin-top:-3px;z-index:5;background:var(--danger);color:#fff;font-size:11.5px;padding:2px 6px;border-radius:4px;white-space:nowrap;font-style:normal}
+.fld .ferr{position:static;margin:2px 0 0;background:none;color:var(--danger);padding:0;white-space:normal}
+td{position:relative}
+
