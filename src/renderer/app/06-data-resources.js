@@ -195,7 +195,7 @@ function ppAdd(pp){
   const i=pp.querySelector('.pp-new input');const name=i.value.trim().replace(/\s+/g,' ');
   if(!name){i.setAttribute('aria-invalid','true');i.placeholder='Type a name first';i.focus();return}
   let pe=S.people.find(x=>x.name.toLowerCase()===name.toLowerCase());
-  if(!pe){pe={id:uid('pe'),name};S.people.push(pe);save();toast(`${name} added to People`)}
+  if(!pe){pe={id:uid('pe'),name,active:true,roleIds:[]};S.people.push(pe);save();toast(`${name} added to People`)}
   const sel=pp.querySelector('select');
   if(![...sel.options].some(o=>o.value===pe.id)){const o=document.createElement('option');o.value=pe.id;o.textContent=pe.name;sel.insertBefore(o,sel.querySelector('option[value="__new"]'))}
   sel.value=pe.id;sel.dataset.prev=pe.id;pp.querySelector('.pp-new').hidden=true;sel.hidden=false;sel.focus();

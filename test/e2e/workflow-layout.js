@@ -14,33 +14,7 @@ const W = 196, GAP = 24;
 function records(dbFile) { const s = new Store(dbFile, { readOnly: true }); try { return s.snapshot().records; } finally { s.close(); } }
 const rec = (rs, c, id) => (rs.find(r => r.coll === c && r.id === (id || '_')) || {}).data;
 
-/* fixture: the HTML export with its own workflow tasks removed and a Schematic standard by specialty */
-function makeFixture(dir) {
-  const src = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'web-export.json'), 'utf8'));
-  const d = src.data;
-  const wfTasks = new Set(d.tasks.filter(t => t.wfStepId).map(t => t.id));
-  d.tasks = d.tasks.filter(t => !wfTasks.has(t.id));
-  d.deliverables.forEach(x => { x.reqTaskIds = (x.reqTaskIds || []).filter(id => !wfTasks.has(id)); });
-  d.projects.forEach(p => { delete p.wfScope; delete p.wfDecide; delete p.wfVersion; });
-  const E = 'sv-electrical', M = 'sv-mechanical', Hy = 'sv-hydraulics', C = 'sv-coordination';
-  let o = 0; const st = (id, sv, cat, name, deps, roleIds) => ({ id, phaseId: 'ph-sd', serviceId: sv, cat, name, desc: '', deps, order: o++, retired: false, createdAt: null, roleIds });
-  d.workflow = { version: 1, appliedAt: '2026-10-01T00:00:00.000Z', demo: false, schema: 2, demoV2: true, steps: [
-    st('co-in1', C, 'input', 'Architectural background', [], ['ro-bimc']),
-    st('el-ac1', E, 'action', 'Preliminary design sketches and notes', ['co-in1'], ['ro-eng']),
-    st('el-ac2', E, 'action', 'Maximum demand calculation', ['el-ac1', 'me-out1'], ['ro-eng']),
-    st('el-out1', E, 'output', 'Electrical schematic report', ['el-ac2'], ['ro-seng', 'ro-qa']),
-    st('me-in1', M, 'input', 'Mechanical brief', [], ['ro-eng']),
-    st('me-out1', M, 'output', 'Preliminary equipment load', ['me-in1'], ['ro-eng']),
-    st('me-ac2', M, 'action', 'Mechanical schematic layout', ['me-out1'], ['ro-bimm', 'ro-dft']),
-    st('me-out2', M, 'output', 'Mechanical schematic report', ['me-ac2'], ['ro-seng']),
-    st('hy-ac1', Hy, 'action', 'Hydraulic schematic design', ['co-in1'], ['ro-bimm', 'ro-dft']),
-    st('hy-out1', Hy, 'output', 'Hydraulic schematic report', ['hy-ac1'], ['ro-seng']),
-    st('co-ac1', C, 'action', 'Services coordination', ['el-out1', 'me-out2', 'hy-out1'], ['ro-bimc'])] };
-  d.workflowDraft = null;
-  const f = path.join(dir, 'layout-fixture.json');
-  fs.writeFileSync(f, JSON.stringify(src, null, 2));
-  return { file: f, data: d };
-}
+const makeFixture = require('./wf-fixture');
 
 module.exports = async function run() {
   console.log('Workflow layout and roles');
@@ -61,7 +35,7 @@ module.exports = async function run() {
     await H.sleep(250);
   }
   const openStd = async () => { await go('settings'); await w.click('[role=tab][data-act=stab][data-v=workflow]'); await H.sleep(200); await w.click('[data-act=wf-sphase][data-v=ph-sd]'); await H.sleep(250); };
-  const IDS = ['co-in1', 'el-ac1', 'el-ac2', 'el-out1', 'me-in1', 'me-out1', 'me-ac2', 'me-out2', 'hy-ac1', 'hy-out1', 'co-ac1'];
+  const IDS = ['fee-co-out', 'co-in1', 'el-ac1', 'el-ac2', 'el-out1', 'me-in1', 'me-out1', 'me-ac2', 'me-out2', 'hy-ac1', 'hy-out1', 'co-ac1'];
   let afterV = null, afterH = null, routeD = null, stdPos = null;
 
   await step('set-up: workspace with the HTML data and a Schematic standard by specialty', async () => {
@@ -81,7 +55,7 @@ module.exports = async function run() {
     await H.until(() => w.evaluate(() => /Imported:/.test(document.getElementById('toasts').textContent)), 10000, 'imported');
     await H.saved(w);
     const rs = records(dbFile);
-    assert.strictEqual(rec(rs, 'workflow').steps.length, 11);
+    assert.strictEqual(rec(rs, 'workflow').steps.length, 12);
     assert.ok(rs.filter(r => r.coll === 'roles').length >= 7, 'default roles');
     await openStd();
     assert.ok(await box('el-ac1'), 'diagram shows the step');
@@ -98,10 +72,10 @@ module.exports = async function run() {
     const grow = lanes1.E.h - lanes0.E.h;
     assert.ok(grow > 100, 'Electrical grew: ' + grow);
     for (const k of ['M', 'Hy', 'C']) assert.strictEqual(lanes1[k].y - lanes0[k].y, grow, k + ' lane pushed by the same amount');
-    for (const id of ['me-in1', 'me-out1', 'me-ac2', 'me-out2', 'hy-ac1', 'hy-out1', 'co-ac1', 'co-in1']) assert.strictEqual(after[id].y - before[id].y, grow, id + ' keeps its place in its lane');
+    for (const id of ['me-in1', 'me-out1', 'me-ac2', 'me-out2', 'hy-ac1', 'hy-out1', 'co-ac1', 'co-in1', 'fee-co-out']) assert.strictEqual(after[id].y - before[id].y, grow, id + ' keeps its place in its lane');
     // no overlap between blocks
     for (const a of IDS) for (const b of IDS) if (a < b) { const A = after[a], B = after[b]; assert.ok(!(Math.abs(A.x - B.x) < W && Math.abs(A.y - B.y) < 84), `overlap ${a}/${b}`); }
-    assert.strictEqual(await w.evaluate(() => document.querySelectorAll('.wfl .wfl-n').length), 4, 'lane names shown');
+    assert.strictEqual(await w.evaluate(() => document.querySelectorAll('.wfl .wfl-n').length), 5, 'lane names shown (4 specialties + Other phases)');
     await H.saved(w);
     const lay = rec(records(dbFile), 'workflowDraft').layout['ph-sd'];
     assert.ok(lay.n['el-ac1'].dy > 120, 'stored relative to the lane: ' + JSON.stringify(lay.n['el-ac1']));
@@ -110,24 +84,29 @@ module.exports = async function run() {
     await H.shot(w, 'layout-1-vertical');
   });
 
-  await step('2 · moving “Preliminary equipment load” moves the activities to its right and stops at its predecessor', async () => {
+  await step('2 · moving “Preliminary equipment load” moves the activities to its right; it stops at the nearest valid position', async () => {
     const b0 = await all(IDS);
-    const set = ['me-out1', 'me-ac2', 'me-out2', 'el-ac2', 'el-out1', 'co-ac1'], still = ['me-in1', 'el-ac1', 'co-in1', 'hy-ac1', 'hy-out1'];
-    await drag('me-out1', -220, 0);
+    const set = ['me-out1', 'me-ac2', 'me-out2', 'el-ac2', 'el-out1', 'co-ac1'], still = ['me-in1', 'el-ac1', 'co-in1', 'hy-ac1', 'fee-co-out'];
+    await drag('me-out1', 150, 0);
     const b1 = await all(IDS), dx = b1['me-out1'].x - b0['me-out1'].x;
-    assert.ok(dx < 0, 'moved left: ' + dx);
-    assert.strictEqual(b1['me-out1'].x, b0['me-in1'].x + W + GAP, 'stopped at the minimum gap after its predecessor');
+    assert.ok(dx > 120, 'moved right: ' + dx);
     for (const id of set) assert.strictEqual(b1[id].x - b0[id].x, dx, id + ' moved with it');
     for (const id of still) assert.strictEqual(b1[id].x, b0[id].x, id + ' stayed');
-    await drag('me-out1', 140, 0);
-    const b2 = await all(IDS), dx2 = b2['me-out1'].x - b1['me-out1'].x;
-    assert.ok(dx2 > 100, 'moved right: ' + dx2);
-    for (const id of set) assert.strictEqual(b2[id].x - b1[id].x, dx2, id + ' moved right with it');
-    // every successor stays after its predecessors
+    await drag('me-out1', -420, 0);
+    const b2 = await all(IDS), inputsEnd = Math.max(b2['me-in1'].x, b2['co-in1'].x, b2['fee-co-out'].x) + W;
+    assert.ok(b2['me-out1'].x < b1['me-out1'].x, 'moved back left');
+    /* it stopped at the nearest valid position: one constraint is exactly tight (a dependency gap or the Inputs zone) */
+    const steps0 = rec(records(dbFile), 'workflowDraft').steps, inSet = new Set(set);
+    const tight = steps0.some(st => inSet.has(st.id) && st.deps.some(d => !inSet.has(d) && b2[d] && b2[st.id].x === b2[d].x + W + GAP)) || b2['me-out1'].x === inputsEnd + 84;
+    assert.ok(tight, 'a dependency or the zone limit stopped it');
+    for (const st of steps0) for (const d of st.deps) if (b2[st.id] && b2[d]) assert.ok(b2[st.id].x >= b2[d].x + W + GAP - 1, `${d} → ${st.id} order kept`);
+    for (const id of set) assert.strictEqual(b2[id].x - b1[id].x, b2['me-out1'].x - b1['me-out1'].x, id + ' moved back with it');
+    await drag('me-out1', 60, 0);
+    const b3 = await all(IDS);
     const steps = rec(records(dbFile), 'workflow').steps;
-    for (const s of steps) for (const d of s.deps) assert.ok(b2[s.id].x >= b2[d].x + W + GAP - 1, `${d} → ${s.id} order kept`);
-    assert.ok(!Number.isInteger((b2['me-out1'].x - 126) / 254), 'intermediate position between automatic columns');
-    afterH = b2;
+    for (const s of steps) for (const d of s.deps) if (b3[s.id] && b3[d] && !(s.cat === 'input' && false)) assert.ok(b3[s.id].x >= b3[d].x + W + GAP - 1, `${d} → ${s.id} order kept`);
+    assert.ok(!Number.isInteger((b3['me-out1'].x - 126) / 254), 'intermediate position between automatic columns');
+    afterH = b3;
     await H.shot(w, 'layout-2-horizontal');
   });
 
@@ -137,9 +116,11 @@ module.exports = async function run() {
     for (const id of ['me-out1', 'me-ac2', 'el-ac2', 'co-ac1']) assert.notStrictEqual(u1[id].x, afterH[id].x, id + ' undone');
     await w.click('[data-wflay=undo]'); await H.sleep(200);
     await w.click('[data-wflay=undo]'); await H.sleep(200);
+    await w.click('[data-wflay=undo]'); await H.sleep(200);
     const u3 = await all(IDS);
     assert.ok(u3['el-ac1'].y < afterV['el-ac1'].y, 'first move undone too');
     for (const k of ['redo', 'redo', 'redo']) { await w.click(`[data-wflay=${k}]`); await H.sleep(200); }
+    await w.click('[data-wflay=redo]').catch(() => {}); await H.sleep(200);
     const r = await all(IDS);
     for (const id of IDS) assert.deepStrictEqual(r[id], afterH[id], id + ' redone');
     await H.saved(w);
@@ -151,7 +132,7 @@ module.exports = async function run() {
     const before = await edgeD(k);
     await w.dispatchEvent(`path.wfe-hit[data-wfe="${k}"]`, 'pointerdown', { button: 0, clientX: 0, clientY: 0 });
     await H.until(() => w.evaluate(() => !!document.querySelector('.wfh')), 3000, 'handles');
-    const hd = await w.$('.wfh[data-wfseg="1"]'); await hd.scrollIntoViewIfNeeded(); const b = await hd.boundingBox();
+    const hd = await w.$('.wfh.v'); await hd.scrollIntoViewIfNeeded(); const b = await hd.boundingBox();
     await w.mouse.move(b.x + 5, b.y + 5); await w.mouse.down(); await w.mouse.move(b.x + 25, b.y + 5, { steps: 4 }); await w.mouse.move(b.x + 41, b.y + 5, { steps: 4 }); await w.mouse.up(); await H.sleep(250);
     routeD = await edgeD(k);
     assert.notStrictEqual(routeD, before, 'route changed');
@@ -159,7 +140,7 @@ module.exports = async function run() {
     const pts = routeD.slice(1).split(' L').map(p => p.split(',').map(Number));
     for (let i = 1; i < pts.length; i++) assert.ok(pts[i][0] === pts[i - 1][0] || pts[i][1] === pts[i - 1][1], 'only horizontal and vertical segments');
     const end = pts[pts.length - 1], prev = pts[pts.length - 2], tgt = await box('el-ac2');
-    assert.ok(end[0] === tgt.x - 2 && prev[1] === end[1] && prev[0] < end[0], 'still ends at its target, pointing right');
+    assert.ok(end[0] === tgt.x - 2 && prev[1] === end[1] && prev[0] < end[0], 'still ends at its target, pointing right: ' + routeD);
     // add a bend, then remove it
     const segs = () => w.evaluate(() => document.querySelectorAll('.wfh').length);
     const n0 = await segs();

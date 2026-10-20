@@ -3,6 +3,6 @@
    The pass/fail counters are shared, so the last line is the total. */
 const H = require('./helpers');
 (async () => {
-  for (const s of ['local', 'features', 'workflow-layout', 'company']) { await require('./' + s)(); console.log(''); }
+  for (const s of ['local', 'features', 'workflow-layout', 'workflow-edit', 'company']) { await require('./' + s)(); console.log(''); }
   process.exit(H.summary('ALL SCENARIOS') ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

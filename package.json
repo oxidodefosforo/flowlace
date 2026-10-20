@@ -1,7 +1,7 @@
 {
   "name": "flowlace",
   "productName": "Flowlace",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Flowlace — projects, deliverables, tasks and resources (desktop app for Windows)",
   "main": "src/main/main.js",
   "author": "Alphazeta Group",

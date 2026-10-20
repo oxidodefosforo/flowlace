@@ -7,7 +7,8 @@
 const DEF_ROLES=()=>[['ro-pm','Project Manager'],['ro-eng','Engineer'],['ro-seng','Senior Engineer'],['ro-bimc','BIM Coordinator'],['ro-bimm','BIM Modeler'],['ro-dft','Drafter'],['ro-qa','Reviewer / QA']].map(([id,name])=>({id,name,active:true,createdAt:null}));
 function normRoles(o,d){
   const seen=new Set();
-  o.roles=Array.isArray(d.roles)?d.roles.filter(r=>r&&r.id&&String(r.name||'').trim()&&!seen.has(r.id)&&seen.add(r.id)).map(r=>({id:String(r.id),name:String(r.name).trim().slice(0,60),active:r.active!==false,createdAt:r.createdAt||null})):DEF_ROLES();
+  /* a workspace stores the catalogue as records: an empty list only means it was never saved → defaults */
+  o.roles=Array.isArray(d.roles)&&d.roles.length?d.roles.filter(r=>r&&r.id&&String(r.name||'').trim()&&!seen.has(r.id)&&seen.add(r.id)).map(r=>({id:String(r.id),name:String(r.name).trim().slice(0,60),active:r.active!==false,createdAt:r.createdAt||null})):DEF_ROLES();
   const ids=new Set(o.roles.map(r=>r.id));
   /* references to a deactivated role are kept (history); only unknown ids are dropped */
   o.people.forEach(pe=>{pe.roleIds=[...new Set(arr(pe.roleIds).map(String))].filter(id=>ids.has(id))});
@@ -25,7 +26,7 @@ function rolePicker(attr,owner,sel,label){
 
 /* ---------- Settings → People: roles catalogue ---------- */
 function settingsRoles(){
-  const used=id=>S.people.filter(pe=>pe.roleIds.includes(id)).length,inStd=id=>wfEdit().steps.filter(s=>!s.retired&&(s.roleIds||[]).includes(id)).length;
+  const used=id=>S.people.filter(pe=>(pe.roleIds||[]).includes(id)).length,inStd=id=>wfEdit().steps.filter(s=>!s.retired&&(s.roleIds||[]).includes(id)).length;
   return `<section class="panelbox"><h2>Roles</h2><p class="note" style="margin:0 0 8px">Roles describe the kind of work a person does (for example Electrical + Engineer). The Company workflow uses them to propose responsibles; the person is chosen in each project. They are not access permissions. A deactivated role keeps its references and history but can’t be chosen for new assignments.</p>
     <div class="twrap"><table class="tbl edit roles"><thead><tr><th>Role</th><th>Active</th><th>Used by</th></tr></thead><tbody>${S.roles.map(r=>`<tr class="${r.active?'':'inact'}"><td style="min-width:200px"><input id="ro-${r.id}" data-role="${r.id}" data-f="name" value="${esc(r.name)}" maxlength="60" aria-label="Role name"></td>
       <td><label class="chk"><input type="checkbox" id="ro-${r.id}-a" data-role="${r.id}" data-f="active"${r.active?' checked':''}> ${r.active?'Active':'Inactive'}</label></td>
@@ -37,8 +38,10 @@ document.addEventListener('change',e=>{const el=e.target;if(!el.dataset)return;
     if(el.dataset.f==='name'){const v=el.value.trim().slice(0,60);if(!v){fieldError(el,'A role needs a name.');el.value=r.name;return}
       if(S.roles.some(x=>x!==r&&x.name.toLowerCase()===v.toLowerCase())){fieldError(el,'That role already exists.');el.value=r.name;return}clearFieldError(el);if(v===r.name)return;r.name=v;save();render();return}
     if(el.dataset.f==='active'){r.active=el.checked;save();render();toast(r.active?`“${r.name}” is active again`:`“${r.name}” deactivated. People and workflow steps keep it; it can’t be chosen for new assignments.`);return}}
-  if(el.dataset.perole){const pe=person(el.dataset.perole);if(!pe)return;const set=new Set(pe.roleIds);el.checked?set.add(el.value):set.delete(el.value);pe.roleIds=rolesSorted([...set]);save();
-    const d=el.closest('details');render();const d2=document.querySelector(`[data-perole="${pe.id}"][value="${el.value}"]`);if(d2){d2.closest('details').open=true;d2.focus()}void d;return}
+  if(el.dataset.perole){const pe=person(el.dataset.perole);if(!pe)return;const set=new Set(pe.roleIds||[]);el.checked?set.add(el.value):set.delete(el.value);pe.roleIds=rolesSorted([...set]);save();setSaveInd();
+    /* update only this picker's summary: the page is not redrawn, so focus, the open list and other fields stay as they are */
+    const d=el.closest('details.rolepick'),sm=d&&d.querySelector('summary');if(sm)sm.innerHTML=pe.roleIds.length?roleChips(pe.roleIds):'<span class="muted">No role</span>';
+    document.querySelectorAll('table.roles tr').forEach(tr=>{const i=tr.querySelector('[data-role][data-f=name]');if(!i)return;const id=i.dataset.role,c=tr.querySelector('td.meta');if(c){const u=S.people.filter(x=>(x.roleIds||[]).includes(id)).length,w=wfEdit().steps.filter(x=>!x.retired&&(x.roleIds||[]).includes(id)).length;c.textContent=[u&&plural(u,'person','people'),w&&plural(w,'workflow step')].filter(Boolean).join(' · ')||'—'}});return}
   if(el.dataset.wfrole){const dr=wfDraft(),s=wfStep(el.dataset.wfrole,dr);if(!s)return;const set=new Set(s.roleIds||[]);el.checked?set.add(el.value):set.delete(el.value);s.roleIds=rolesSorted([...set]);save(true);setSaveInd();render();
     const c=document.querySelector(`[data-wfrole="${s.id}"][value="${el.value}"]`);if(c){c.closest('details').open=true;c.focus()}return}
   if(el.dataset.wfmap){const p=project(el.dataset.pid);if(!p)return;p.wfRoleMap={...(p.wfRoleMap||{})};if(el.value)p.wfRoleMap[el.dataset.wfmap]=el.value;else delete p.wfRoleMap[el.dataset.wfmap];p.updatedAt=new Date().toISOString();save();render();
@@ -60,7 +63,7 @@ function wfPropose(p,s,mode){
   if(!roles.length)return {pid:null,cands:[],via:'norole',reason:'No responsible role in the standard'};
   const map=p.wfRoleMap||{};
   for(const r of roles){const id=map[(spec||'_none')+'|'+r],pe=id&&person(id);if(pe&&pe.active!==false)return {pid:pe.id,cands:[pe],via:'map',role:r,reason:`Project mapping: ${specN} / ${roleName(r)}`}}
-  const act=roles.filter(r=>role(r).active),cands=people.filter(pe=>pe.disciplineId===spec&&pe.roleIds.some(r=>act.includes(r)));
+  const act=roles.filter(r=>role(r).active),cands=people.filter(pe=>pe.disciplineId===spec&&(pe.roleIds||[]).some(r=>act.includes(r)));
   const rl=act.map(roleName).join(' or ')||roles.map(roleName).join(' or ');
   if(cands.length===1)return {pid:cands[0].id,cands,via:'unique',reason:`Only active ${specN} person with role ${rl}`};
   if(cands.length>1)return {pid:null,cands,via:'choose',reason:`${cands.length} active ${specN} people with role ${rl}: choose one`};
@@ -86,7 +89,7 @@ function wfRoleMapHTML(p){
   if(!list.length)return `<details class="wfmap"${open?' open':''} data-wfmapd="${p.id}"><summary><b>Responsibles by role</b> <span class="muted">— no imported activity has a responsible role yet (Settings → Company workflow → step → Responsible role(s))</span></summary></details>`;
   const set=list.filter(([k])=>map[k]).length;
   return `<details class="wfmap"${open?' open':''} data-wfmapd="${p.id}"><summary><b>Responsibles by role</b> <span class="muted">${set}/${list.length} mapped · used by Import activities and Assign by role</span></summary>
-    <table class="tbl wfmap-t"><thead><tr><th>Specialty</th><th>Role</th><th>Person in this project</th><th>Candidates</th></tr></thead><tbody>${list.map(([k,x])=>{const c=S.people.filter(pe=>pe.active!==false&&pe.disciplineId===(x.spec==='_none'?null:x.spec)&&pe.roleIds.includes(x.r));
+    <table class="tbl wfmap-t"><thead><tr><th>Specialty</th><th>Role</th><th>Person in this project</th><th>Candidates</th></tr></thead><tbody>${list.map(([k,x])=>{const c=S.people.filter(pe=>pe.active!==false&&pe.disciplineId===(x.spec==='_none'?null:x.spec)&&(pe.roleIds||[]).includes(x.r));
       return `<tr><td>${esc(wfSpecName(x.spec))}</td><td>${roleChips([x.r])}</td><td><select class="in sm" data-wfmap="${k}" data-pid="${p.id}" aria-label="${esc(wfSpecName(x.spec)+' / '+roleName(x.r))}"><option value="">By role (automatic)</option>${S.people.filter(pe=>pe.active!==false||map[k]===pe.id).sort((a,b)=>(c.includes(b)-c.includes(a))||a.name.localeCompare(b.name)).map(pe=>`<option value="${pe.id}"${map[k]===pe.id?' selected':''}>${esc(pe.name)}${c.includes(pe)?' ★':''}</option>`).join('')}</select></td><td class="muted">${c.length?c.map(pe=>esc(pe.name)).join(', '):'none'}</td></tr>`}).join('')}</tbody></table>
     <p class="hint" style="margin:6px 0 0">★ = active person of that specialty with that role. The mapping only proposes; existing assignments are never changed.</p></details>`;
 }

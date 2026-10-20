@@ -40,21 +40,24 @@ function settingsWorkflow(){
   return h;
 }
 function wfStdCard(s,ed,i,n){
-  const open=ui.wfExp&&ui.wfExp.has(s.id),sel=ui.wfSel===s.id,deps=s.deps.map(d=>wfStep(d,ed)).filter(Boolean),used=wfStd().steps.some(x=>x.id===s.id);
-  const cand=ed.steps.filter(x=>!x.retired&&x.id!==s.id),groups=[s.phaseId,...S.phases.map(g=>g.id).filter(id=>id!==s.phaseId)].filter(ph=>cand.some(x=>x.phaseId===ph));
-  return `<div class="wfc${sel?' sel':''}" id="wfc-${s.id}" data-wfc="${s.id}">
-    <div class="wfc-h"><input class="in wfc-n" id="wfs-${s.id}-n" data-wfs="${s.id}" data-f="name" value="${esc(s.name)}" maxlength="160" aria-label="Step name"><span class="wfc-ord"><button class="iconbtn" data-act="wf-move" data-id="${s.id}" data-d="-1" aria-label="Move up"${i?'':' disabled'}>↑</button><button class="iconbtn" data-act="wf-move" data-id="${s.id}" data-d="1" aria-label="Move down"${i<n-1?'':' disabled'}>↓</button></span><button class="iconbtn" data-act="wf-exp" data-id="${s.id}" aria-expanded="${!!open}" aria-label="Details of ${esc(s.name)}">${open?'▴':'▾'}</button></div>
-    <div class="wfc-d"><span class="chip wfspec-c${s.serviceId?'':' c-w'}">${esc(wfSpecName(wfSpecOf(s)))}</span>${(s.roleIds||[]).length?roleChips(s.roleIds):''}${deps.length?`<span class="muted">needs</span> ${deps.map(d=>`<button class="chip wfdep${d.phaseId!==s.phaseId?' other':''}" data-act="wf-sel" data-id="${d.id}" title="${esc(phName(d.phaseId)+' · '+wfSpecName(wfSpecOf(d)))}">${esc(d.name)}${d.serviceId!==s.serviceId?` <small>${esc(wfSpecName(wfSpecOf(d)))}</small>`:''}${d.phaseId!==s.phaseId?` <small>${esc(phName(d.phaseId))}</small>`:''}</button>`).join(' ')}`:'<span class="muted">No dependencies</span>'}${s.desc&&!open?`<div class="wfc-desc">${esc(s.desc)}</div>`:''}</div>
-    ${open?`<div class="wfc-x">
+  /* compact by default: name and description; specialty, roles, dependencies and the rest under "Show details" */
+  const open=ui.wfExp&&ui.wfExp.has(s.id),sel=ui.wfSel===s.id,used=wfStd().steps.some(x=>x.id===s.id);
+  return `<div class="wfc${sel?' sel':''}${open?' open':''}" id="wfc-${s.id}" data-wfc="${s.id}">
+    <div class="wfc-h"><input class="in wfc-n" id="wfs-${s.id}-n" data-wfs="${s.id}" data-f="name" value="${esc(s.name)}" maxlength="160" aria-label="Step name"><span class="wfc-ord" aria-label="Order"><button class="iconbtn" data-act="wf-move" data-id="${s.id}" data-d="-1" aria-label="Move up"${i?'':' disabled'}>↑</button><button class="iconbtn" data-act="wf-move" data-id="${s.id}" data-d="1" aria-label="Move down"${i<n-1?'':' disabled'}>↓</button></span></div>
+    ${s.desc&&!open?`<div class="wfc-desc">${esc(s.desc)}</div>`:''}
+    <div class="wfc-tg"><button type="button" class="linkbtn wfc-more" data-act="wf-exp" data-id="${s.id}" aria-expanded="${!!open}" aria-controls="wfc-x-${s.id}">${open?'Hide details':'Show details'}</button></div>
+    ${open?`<div class="wfc-x" id="wfc-x-${s.id}">
       <label class="cp-in"><span>Description / instructions</span><textarea class="in" rows="2" id="wfs-${s.id}-d" data-wfs="${s.id}" data-f="desc">${esc(s.desc)}</textarea></label>
       <div class="wfc-2"><label class="cp-in"><span>Specialty</span><select class="in" id="wfs-${s.id}-s" data-wfs="${s.id}" data-f="serviceId">${s.serviceId?'':'<option value="" selected>To classify</option>'}${wfSpecs(ed).filter(x=>x!=='_none').map(id=>`<option value="${id}"${id===s.serviceId?' selected':''}>${esc(wfSpecName(id))}</option>`).join('')}</select></label>
       <label class="cp-in"><span>Category</span><select class="in" id="wfs-${s.id}-c" data-wfs="${s.id}" data-f="cat">${WF_COLS.map(([k])=>`<option value="${k}"${k===s.cat?' selected':''}>${WF_CAT[k]}</option>`).join('')}</select></label></div>
       <div class="cp-in"><span>Responsible role(s)</span>${rolePicker('data-wfrole',s.id,s.roleIds,'Responsible roles of '+esc(s.name))}<small class="hint">Expected role; the person is resolved in each project (mapping or people with this specialty and role).</small></div>
-      <fieldset class="wfdeps"><legend>Depends on</legend>${groups.length?groups.map(ph=>`<div class="wfdeps-g"><b>${esc(phName(ph))}${ph===s.phaseId?'':' <small>(other phase)</small>'}</b>${cand.filter(x=>x.phaseId===ph).sort((a,b)=>wfSpecs(ed).indexOf(wfSpecOf(a))-wfSpecs(ed).indexOf(wfSpecOf(b))||WF_COLS.findIndex(c=>c[0]===a.cat)-WF_COLS.findIndex(c=>c[0]===b.cat)).map(x=>{const on=s.deps.includes(x.id),cyc=!on&&wfCycle(ed,s.id,x.id);return `<label class="chk${cyc?' dis':''}" title="${cyc?esc(`Not possible: ${x.name} already depends on ${s.name} (it would create a loop)`):''}"><input type="checkbox" data-wfdep="${s.id}" value="${x.id}"${on?' checked':''}${cyc?' disabled':''}><span>${esc(x.name)} <small>${WF_CAT[x.cat]} · ${esc(wfSpecName(wfSpecOf(x)))}</small></span></label>`}).join('')}</div>`).join(''):'<span class="muted">No other steps yet.</span>'}</fieldset>
+      ${wfDepPicker(s,ed)}
       <div class="row"><span class="muted" style="font-size:11.5px">Step id: ${esc(s.id)}</span><span class="spacer"></span><button class="btn sm ghost danger-t" data-act="wf-retire" data-id="${s.id}">${used?'Retire step…':'Remove step'}</button></div></div>`:''}</div>`;
 }
 function wfMutate(fn){const dr=wfDraft();fn(dr);save(true);setSaveInd();render()}
-function wfAddStep(cat,ph,name,spec){wfMutate(dr=>{const col=wfColSteps(dr,ph,cat);dr.steps.push({id:uid('ws'),phaseId:ph,serviceId:service(spec)?spec:null,cat,name,desc:'',deps:[],order:col.length?Math.max(...col.map(s=>s.order))+1:0,retired:false,createdAt:new Date().toISOString()})})}
+function wfAddStep(cat,ph,name,spec){wfMutate(dr=>{const col=wfColSteps(dr,ph,cat),st={id:uid('ws'),phaseId:ph,serviceId:service(spec)?spec:null,cat,name,desc:'',deps:[],order:0,retired:false,createdAt:new Date().toISOString(),roleIds:[]};
+  /* in the diagram a new activity goes at the start of its zone (cards of new activities start collapsed) */
+  st.order=col.length?Math.max(...col.map(x=>x.order))+1:0;dr.steps.push(st);wfInsertInLayout(dr,st)})}
 async function wfRetire(id){
   const dr=wfDraft(),s=wfStep(id,dr);if(!s)return;const used=wfStd().steps.some(x=>x.id===id);
   const ts=S.tasks.filter(t=>t.wfStepId===id),done=ts.filter(t=>t.status==='Done').length,dependents=dr.steps.filter(x=>x.deps.includes(id));
@@ -120,12 +123,14 @@ function projectWorkflow(p){
   return h;
 }
 function wfExecCard(t,p){
-  const s=wfStep(t.wfStepId),a=wfAvail(t),req=wfReqOf(t),ext=!wfIsInt(t),sel=ui.wfSel===s.id,cons=ext?wfConsumers(t):[];
-  return `<div class="wfc wfx a-${a.k}${ext?' ext':''}${sel?' sel':''}" id="wfc-${s.id}" data-wfc="${s.id}">
-    <div class="wfx-h"><input type="checkbox" data-wfdone="${t.id}"${t.status==='Done'?' checked':''} aria-label="${ext?'Received and validated':'Completed'}: ${esc(t.name)}"><button class="plainbtn wfx-n" data-act="panel-task" data-id="${t.id}" data-wfsel="${s.id}">${ext?`<span class="wfx-ext">External input</span> ${esc(s.name)}`:esc(t.name)}</button><span class="chip wfspec-c">${esc(wfSpecName(wfSpecOf(s)))}</span>${!ext&&(s.roleIds||[]).length?roleChips(s.roleIds):''}</div>
+  const s=wfStep(t.wfStepId),a=wfAvail(t),req=wfReqOf(t),ext=!wfIsInt(t),sel=ui.wfSel===s.id,cons=ext?wfConsumers(t):[],open=ui.wfExpT&&ui.wfExpT.has(t.id);
+  return `<div class="wfc wfx a-${a.k}${ext?' ext':''}${sel?' sel':''}${open?' open':''}" id="wfc-${s.id}" data-wfc="${s.id}">
+    <div class="wfx-h"><input type="checkbox" data-wfdone="${t.id}"${t.status==='Done'?' checked':''} aria-label="${ext?'Received and validated':'Completed'}: ${esc(t.name)}"><button class="plainbtn wfx-n" data-act="panel-task" data-id="${t.id}" data-wfsel="${s.id}">${ext?`<span class="wfx-ext">External input</span> ${esc(s.name)}`:esc(t.name)}</button></div>
+    ${s.desc?`<div class="wfc-desc">${esc(s.desc)}</div>`:''}
     <div class="wfx-m">${ext?'<span class="muted">Follow-up</span>':''}${personPicker('wfa-'+t.id,t.assignedToId,`data-ent="t" data-id="${t.id}" data-f="assignedToId" aria-label="${ext?'Internal follow-up':'Assignee'} of ${esc(t.name)}"`)}<span class="wfx-st">${TGLYPH[t.status]} ${esc(t.status)}</span></div>
-    <div class="wfx-a">${wfAvailChip(a)}${a.k==='blocked'?`<span class="muted"> · needs ${esc(wfMissText(a.miss))}</span>`:a.warn?`<span class="warnt"> · ${esc(a.warn)}</span>`:''}${t.due?`<span class="muted"> · ${ext?'required':'due'} ${fmt(t.due)}</span>`:''}${ext?`<span class="muted"> · ${t.wfConsultant?esc(t.wfConsultant):'consultant not set'} · needed by ${cons.length?cons.map(c=>esc(wfStep(c.wfStepId).name)).join(', '):'no current activity'}</span>`:''}</div>
-    ${req.length?`<div class="wfx-r">${req.map(d=>`<button class="chip" data-act="panel-deliv" data-id="${d.id}" title="Required by ${esc(d.name)}">${esc(d.name)}</button>`).join('')}</div>`:''}</div>`;
+    <div class="wfc-tg"><button type="button" class="linkbtn wfc-more" data-wfexpt="${t.id}" aria-expanded="${!!open}">${open?'Hide details':'Show details'}</button></div>
+    ${open?`<div class="wfc-x"><div class="wfx-a"><span class="chip wfspec-c">${esc(wfSpecName(wfSpecOf(s)))}</span>${!ext&&(s.roleIds||[]).length?roleChips(s.roleIds):''} ${wfAvailChip(a)}${a.k==='blocked'?`<span class="muted"> · needs ${esc(wfMissText(a.miss))}</span>`:a.warn?`<span class="warnt"> · ${esc(a.warn)}</span>`:''}${t.due?`<span class="muted"> · ${ext?'required':'due'} ${fmt(t.due)}</span>`:''}${ext?`<span class="muted"> · ${t.wfConsultant?esc(t.wfConsultant):'consultant not set'} · needed by ${cons.length?cons.map(c=>esc(wfStep(c.wfStepId).name)).join(', '):'no current activity'}</span>`:''}</div>
+    ${req.length?`<div class="wfx-r">${req.map(d=>`<button class="chip" data-act="panel-deliv" data-id="${d.id}" title="Required by ${esc(d.name)}">${esc(d.name)}</button>`).join('')}</div>`:''}<div class="row"><button class="btn sm ghost" data-wfgoto="${s.id}">Edit in Company workflow</button></div></div>`:''}</div>`;
 }
 
 /* ---------- Import activities (explicit, incremental) ---------- */

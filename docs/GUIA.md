@@ -182,35 +182,53 @@ En **Settings → Workspace & Storage → Backups** (en Company, solo los admini
 
 ## 9. Workflow: ordenar el diagrama y asignar por roles
 
-**Mover bloques.** En el diagrama (Settings → Company workflow o en el Workflow de un proyecto), arrastra cualquier bloque. Un clic sin arrastrar sigue seleccionándolo o abriéndolo como siempre.
+**Zonas.** Cada fase se organiza de izquierda a derecha en tres zonas invisibles: **Inputs → Actions → Outputs**. Una línea punteada con el título "Outputs — [fase]" marca el inicio de los Outputs. Es solo una referencia visual: no intercepta clics y las flechas pueden atravesarla.
 
-- **Vertical:** el bloque se mueve dentro de su especialidad. El carril crece para contenerlo y los carriles de abajo bajan con todo su contenido. La posición se guarda respecto al carril.
-- **Horizontal:** se mueve el bloque junto con las actividades que le siguen a su derecha, sin perder sus distancias. El conjunto se detiene en la posición válida más cercana: ninguna actividad queda antes que la que necesita, y siempre hay una separación mínima. Se admiten posiciones entre las columnas automáticas.
-- **Teclado:** con el bloque enfocado, **Alt + flechas** lo mueve (con Mayús, en pasos más largos).
+- **Actividades nuevas:** se colocan al inicio de su zona, a la izquierda de la primera de su categoría y en el carril de su especialidad. Si no hay sitio, los bloques de la derecha se desplazan.
+- **Outputs sin dependencias:** aparecen siempre en la zona de Outputs.
+- **Referencias de otras fases:** se muestran en la banda "Other phases", dentro de la zona de Inputs. Si alimentan un Input, quedan en una subcolumna a su izquierda. Moverlas solo cambia su lugar en esa fase.
+- **Relaciones en sentido contrario:** se conservan y se marcan para revisión. Por ejemplo, una Action que depende de un Output.
+- **Auto layout** aplica las mismas reglas.
 
-**Ajustar flechas.** Pulsa **Edit layout** y haz clic en una flecha.
+**Mover bloques.** Arrastra cualquier bloque; un clic sin arrastrar sigue seleccionándolo o abriéndolo.
 
-- Arrastra sus tramos horizontales o verticales.
-- Doble clic sobre la línea añade un quiebre; doble clic sobre un control lo quita.
-- **Reset route** devuelve solo esa flecha a su recorrido automático.
+- **Vertical:** el carril crece mientras arrastras y empuja hacia abajo los carriles inferiores, incluida "Other phases", con sus bloques y flechas. El bloque nunca cambia de especialidad.
+- **Horizontal:** se mueven con él las actividades que le siguen a su derecha. Si una Action necesita más espacio, la zona de Actions se amplía, el separador de Outputs se desplaza y los Outputs se apartan lo necesario. El movimiento se detiene en la posición válida más cercana: ninguna actividad queda antes que lo que necesita, y nada entra en una zona anterior.
+- **Guías:** al acercar un bloque a otro aparecen guías rojas de alineación (bordes y centros) con un ajuste suave. Si sigues moviendo, el ajuste se suelta. En X sirven los bloques de cualquier carril; en Y, solo los del mismo carril.
+- **Varios bloques:** con **Edit layout**, Mayús o Ctrl + clic selecciona varios. El primero es la referencia fija. Están disponibles **Align columns**, **Align rows** y **Distribute**. Lo que no puede moverse por una dependencia, una zona o una superposición se queda donde estaba y se explica por qué.
+- **Teclado:** Alt + flechas mueve el bloque enfocado. **Esc** cancela un arrastre y lo devuelve a su sitio.
 
-Los extremos siguen unidos a sus bloques y la flecha siempre sale por la derecha y entra por la izquierda. Cambiar el origen o el destino se sigue haciendo con "Depends on".
+**Ajustar flechas (Edit layout + clic en una flecha)**
 
-**Barra del diagrama**
+- **Segmentos y quiebres:** arrastra cualquier tramo. Doble clic en la línea añade un quiebre; doble clic en un control lo quita.
+- **Puntos de origen y destino:** arrastra los círculos de los extremos a cualquiera de los cuatro bordes de su bloque (arriba, abajo, izquierda, derecha) y a lo largo de ese borde. El borde se resalta y el recorrido se recalcula. Si sueltas lejos del bloque, la flecha vuelve a donde estaba. La dependencia nunca cambia.
+- **Reset route** devuelve solo esa flecha a su recorrido y anclajes automáticos.
+- **Rounded** suaviza las esquinas, solo visualmente.
+- **Al mover bloques,** los anclajes y recorridos manuales los acompañan.
 
-| Botón | Qué hace |
-|---|---|
-| **Edit layout** | Activa la edición de flechas. |
-| **Undo / Redo** | Deshace o rehace un movimiento completo: bloques, carriles y flechas a la vez. |
-| **Auto layout** | Vuelve a la distribución automática de la vista. |
-| **Reset layout** | En el estándar, vuelve a la distribución publicada; en un proyecto, a la del estándar. Las actividades y dependencias no cambian. |
+**Agregar dependencias desde el diagrama** (Company workflow)
+
+- **Connect:** haz clic en A (lo que se necesita) y luego en B (lo que lo necesita). **A → B significa que B depende de A.** Se confirma antes de guardar.
+- **Arrastrando:** con Edit layout, arrastra desde el punto de conexión en el borde derecho de un bloque hasta otro bloque.
+- **Add prerequisite…:** aparece al seleccionar una actividad y abre el selector con filtros, incluidas otras fases.
+- **Validaciones:** los duplicados, las autorreferencias y los ciclos se rechazan con la explicación.
+- **Desde un proyecto:** "Edit in Company workflow" abre esa actividad en el estándar.
+
+**Tarjetas de la matriz.** Muestran solo el nombre y la descripción. "Show details" abre la configuración de cada tarjeta por separado: especialidad, categoría, roles, dependencias y retiro. "Depends on" incluye:
+
+- búsqueda por nombre y descripción;
+- filtros Type, Service y Phase (por defecto la fase actual), combinados con Y entre filtros y con O dentro de un mismo filtro;
+- el número de resultados;
+- las dependencias elegidas, que se muestran aparte aunque los filtros las oculten. Los filtros nunca las quitan.
+
+**Barra:** Edit layout · Undo / Redo · Auto layout · Reset layout · Connect · Rounded. Cada arrastre, alineación o ajuste de flecha es **una sola operación** para Undo / Redo: bloques, carriles, zonas, recorridos y anclajes a la vez. **Reset layout** vuelve, en el estándar, a la distribución publicada; en un proyecto, a la del estándar.
 
 **Dónde se guarda la distribución**
 
-- **Separada de la estructura:** se guarda por fase, aparte de las actividades y dependencias.
-- **En el estándar:** forma parte del borrador y se comparte con los proyectos al pulsar **Save and publish**.
-- **En cada proyecto:** el proyecto parte de la distribución del estándar y puede tener sus propios ajustes, que nunca cambian el estándar.
-- **Se mantiene** al cambiar de fase o pestaña, al filtrar especialidades, al cerrar Flowlace y al exportar o importar.
+- **Por fase, separada de la estructura:** se guarda aparte de las actividades y dependencias. Incluye posiciones relativas al carril, altura de carriles, inicio de zonas, recorridos y anclajes (borde + posición relativa).
+- **En el estándar:** forma parte del borrador y se publica con **Save and publish**.
+- **En cada proyecto:** el proyecto parte de la distribución del estándar y guarda sus ajustes propios, que nunca cambian el estándar.
+- **Se mantiene** al cambiar de fase, filtrar, navegar entre proyectos, reiniciar y exportar o importar.
 
 **Roles (Settings → People)**
 
@@ -245,6 +263,7 @@ Se ejecutó todo en Linux (Ubuntu 24.04) con Electron 43.7.7 real, en pantalla v
 | App de escritorio, funciones existentes: datos de ejemplo explícitos; Overview (timeline/table/calendar), Projects y sus pestañas, panel de tarea, Resources, todas las pestañas de Settings, Workflow → Import activities; **relaciones íntegras tras reiniciar**; quitar ejemplos sin que reaparezcan | 10/10 ✓ |
 | Company, servidor real + **dos clientes** Electron: conexión, importación, mismo contenido en ambos, permisos de miembro, **cambios en vivo sin cerrar el panel**, edición en curso no interrumpida, **desconexión y reconexión**, **conflicto sobre la misma tarea**, preferencias por usuario, auditoría, **restauración** con recarga de ambos clientes | 12/12 ✓ |
 | Workflow (13 comprobaciones): bajar "Preliminary design sketches and notes" amplía Electrical y desplaza los carriles inferiores sin superposiciones; mover "Preliminary equipment load" desplaza el conjunto de la derecha y se detiene ante su predecesor; undo/redo de movimientos completos; flecha editada que se conserva al cambiar de vista, al publicar y al reiniciar; filtros que conservan posiciones; proyecto basado en el estándar con ajustes propios; roles con propuesta, selección manual, mapeo y "Assign by role" sin tocar asignaciones previas; exportación JSON con distribución y roles; datos existentes íntegros | 13/13 ✓ |
+| Edición del workflow (20 comprobaciones): People antes y después de usar el diagrama, incluso con un arrastre interrumpido; zonas Inputs → Actions → Outputs al crear y con Auto layout; referencias de otras fases en la zona de Inputs; carriles y separador de Outputs que se desplazan en tiempo real; secuencia y dependencias conservadas; filtros de "Depends on"; tarjetas independientes; guías y alineación; origen de la flecha de "Send architectural layouts…" en el borde superior; anclajes y recorridos que siguen a los bloques; Connect A → B; duplicados y ciclos rechazados; Undo/Redo; reinicio; datos íntegros | 20/20 ✓ |
 | Paquete de servidor: `node.exe` de Windows ejecutado con Wine (init, serve, login, commit, backup) | ✓ |
 
 **Compilación de Windows:** `FlowlaceSetup.exe` (Squirrel), el zip portátil y el paquete de Flowlace Server se generaron en Linux con Wine y Mono. Se verificó que `Flowlace.exe` lleva el icono, el nombre y los metadatos.
