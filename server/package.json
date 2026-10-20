@@ -1,7 +1,7 @@
 {
   "name": "flowlace-server",
   "productName": "Flowlace Server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Flowlace Server: shared SQLite workspaces for Flowlace clients on a company network (HTTPS API + live updates).",
   "private": true,
   "license": "UNLICENSED",
