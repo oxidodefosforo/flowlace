@@ -108,7 +108,7 @@ const wfStd=()=>S.workflow||WF_EMPTY;
 const wfEdit=()=>S.workflowDraft||wfStd();
 const wfClone=x=>JSON.parse(JSON.stringify(x));
 function wfDraft(){if(!S.workflowDraft)S.workflowDraft=wfClone(wfStd());return S.workflowDraft}
-function wfDirty(){return !!S.workflowDraft&&JSON.stringify(S.workflowDraft.steps)!==JSON.stringify(wfStd().steps)}
+function wfDirty(){const d=S.workflowDraft,s=wfStd();return !!d&&(JSON.stringify(d.steps)!==JSON.stringify(s.steps)||JSON.stringify(d.layout||{})!==JSON.stringify(s.layout||{}))}
 function wfStep(id,std){return (std||wfStd()).steps.find(s=>s.id===id)||null}
 const wfSpecOf=s=>s&&s.serviceId||'_none';
 function wfSpecName(id){return id==='_none'?'To classify':(service(id)?.name||'Unknown')}

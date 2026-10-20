@@ -138,6 +138,9 @@ async function flush() {
   let { ops, sent } = buildOps();
   if (!SY.isAdmin) {
     // company configuration is read-only for members: such changes are not sent and the confirmed version is put back
+    // records that exist only because this version adds defaults (e.g. the roles catalogue) wait for an administrator
+    const fresh = ops.filter(o => MS.isAdminOnly(o.coll) && !SY.base.has(SKEY(o.coll, o.id)) && o.type !== 'del');
+    if (fresh.length) { ops = ops.filter(o => !fresh.includes(o)); fresh.forEach(o => sent.delete(SKEY(o.coll, o.id))); }
     const bad = ops.filter(o => MS.isAdminOnly(o.coll));
     if (bad.length) {
       bad.forEach(o => revertKey(SKEY(o.coll, o.id)));

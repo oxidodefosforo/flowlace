@@ -180,7 +180,60 @@ En **Settings → Workspace & Storage → Backups** (en Company, solo los admini
 - **Marcados y separados:** quedan marcados como **Example** y se quitan con **Remove example data**. Si el espacio ya tiene proyectos reales, Flowlace pide confirmación y recomienda usar un espacio de trabajo aparte para probar.
 - **En Company:** solo un administrador puede cargarlos.
 
-## 9. Qué se comprobó en esta entrega
+## 9. Workflow: ordenar el diagrama y asignar por roles
+
+**Mover bloques.** En el diagrama (Settings → Company workflow o en el Workflow de un proyecto), arrastra cualquier bloque. Un clic sin arrastrar sigue seleccionándolo o abriéndolo como siempre.
+
+- **Vertical:** el bloque se mueve dentro de su especialidad. El carril crece para contenerlo y los carriles de abajo bajan con todo su contenido. La posición se guarda respecto al carril.
+- **Horizontal:** se mueve el bloque junto con las actividades que le siguen a su derecha, sin perder sus distancias. El conjunto se detiene en la posición válida más cercana: ninguna actividad queda antes que la que necesita, y siempre hay una separación mínima. Se admiten posiciones entre las columnas automáticas.
+- **Teclado:** con el bloque enfocado, **Alt + flechas** lo mueve (con Mayús, en pasos más largos).
+
+**Ajustar flechas.** Pulsa **Edit layout** y haz clic en una flecha.
+
+- Arrastra sus tramos horizontales o verticales.
+- Doble clic sobre la línea añade un quiebre; doble clic sobre un control lo quita.
+- **Reset route** devuelve solo esa flecha a su recorrido automático.
+
+Los extremos siguen unidos a sus bloques y la flecha siempre sale por la derecha y entra por la izquierda. Cambiar el origen o el destino se sigue haciendo con "Depends on".
+
+**Barra del diagrama**
+
+| Botón | Qué hace |
+|---|---|
+| **Edit layout** | Activa la edición de flechas. |
+| **Undo / Redo** | Deshace o rehace un movimiento completo: bloques, carriles y flechas a la vez. |
+| **Auto layout** | Vuelve a la distribución automática de la vista. |
+| **Reset layout** | En el estándar, vuelve a la distribución publicada; en un proyecto, a la del estándar. Las actividades y dependencias no cambian. |
+
+**Dónde se guarda la distribución**
+
+- **Separada de la estructura:** se guarda por fase, aparte de las actividades y dependencias.
+- **En el estándar:** forma parte del borrador y se comparte con los proyectos al pulsar **Save and publish**.
+- **En cada proyecto:** el proyecto parte de la distribución del estándar y puede tener sus propios ajustes, que nunca cambian el estándar.
+- **Se mantiene** al cambiar de fase o pestaña, al filtrar especialidades, al cerrar Flowlace y al exportar o importar.
+
+**Roles (Settings → People)**
+
+- **Catálogo editable:** Project Manager, Engineer, Senior Engineer, BIM Coordinator, BIM Modeler, Drafter y Reviewer / QA, más los que crees.
+- **Por persona:** cada persona puede tener varios roles. La especialidad sigue siendo un campo aparte (por ejemplo Electrical + Engineer).
+- **Desactivar un rol** conserva sus referencias, pero ya no se puede elegir para asignaciones nuevas.
+- **No son permisos:** los roles sirven para asignar trabajo, no para dar acceso.
+
+**Responsables por rol**
+
+1. **En el estándar:** cada actividad tiene **Responsible role(s)**.
+2. **En el proyecto:** **Responsibles by role** permite fijar, por especialidad y rol, quién lo cubre en ese proyecto.
+3. **Import activities** propone un responsable para cada actividad nueva:
+   - usa primero ese mapeo del proyecto;
+   - si no hay, busca personas activas con la especialidad y alguno de los roles;
+   - si hay una sola persona válida, la preselecciona; si hay varias, pide elegir;
+   - si no hay ninguna, deja la actividad sin asignar y explica por qué;
+   - siempre puedes elegir a otra persona a mano.
+4. **Assign by role…** completa, con vista previa, solo las actividades importadas que siguen sin responsable.
+
+Las asignaciones existentes nunca se cambian solas, aunque cambien los roles de una persona o del estándar. Los inputs externos no reciben responsable propuesto: su diseño es del consultor, y el seguimiento interno se elige a mano.
+
+## 10. Qué se comprobó en esta entrega
 
 Se ejecutó todo en Linux (Ubuntu 24.04) con Electron 43.7.7 real, en pantalla virtual, y Flowlace Server en Node.js. Los resultados:
 
@@ -191,6 +244,7 @@ Se ejecutó todo en Linux (Ubuntu 24.04) con Electron 43.7.7 real, en pantalla v
 | App de escritorio, Local: primera apertura, crear, espacio vacío, guardado confirmado, **persistencia tras reiniciar**, **importación JSON con resumen y sin duplicados**, identificadores en SQLite, preferencias personales, backup, **restauración con copia previa**, carpeta ausente sin crear base vacía | 13/13 ✓ |
 | App de escritorio, funciones existentes: datos de ejemplo explícitos; Overview (timeline/table/calendar), Projects y sus pestañas, panel de tarea, Resources, todas las pestañas de Settings, Workflow → Import activities; **relaciones íntegras tras reiniciar**; quitar ejemplos sin que reaparezcan | 10/10 ✓ |
 | Company, servidor real + **dos clientes** Electron: conexión, importación, mismo contenido en ambos, permisos de miembro, **cambios en vivo sin cerrar el panel**, edición en curso no interrumpida, **desconexión y reconexión**, **conflicto sobre la misma tarea**, preferencias por usuario, auditoría, **restauración** con recarga de ambos clientes | 12/12 ✓ |
+| Workflow (13 comprobaciones): bajar "Preliminary design sketches and notes" amplía Electrical y desplaza los carriles inferiores sin superposiciones; mover "Preliminary equipment load" desplaza el conjunto de la derecha y se detiene ante su predecesor; undo/redo de movimientos completos; flecha editada que se conserva al cambiar de vista, al publicar y al reiniciar; filtros que conservan posiciones; proyecto basado en el estándar con ajustes propios; roles con propuesta, selección manual, mapeo y "Assign by role" sin tocar asignaciones previas; exportación JSON con distribución y roles; datos existentes íntegros | 13/13 ✓ |
 | Paquete de servidor: `node.exe` de Windows ejecutado con Wine (init, serve, login, commit, backup) | ✓ |
 
 **Compilación de Windows:** `FlowlaceSetup.exe` (Squirrel), el zip portátil y el paquete de Flowlace Server se generaron en Linux con Wine y Mono. Se verificó que `Flowlace.exe` lleva el icono, el nombre y los metadatos.

@@ -84,7 +84,7 @@ function normalize(d){
   // every deliverable and phase-linked task needs its project phase instance (created without dates)
   o.deliverables.forEach(x=>ensurePP(x.projectId,x.phaseId,o));
   o.tasks.forEach(t=>{if(t.phaseId)ensurePP(t.projectId,t.phaseId,o)});
-  ensureProjSeq(o);normViews(o,d);normBrand(o,d);normRes(o,d);normWF(o,d);
+  ensureProjSeq(o);normViews(o,d);normBrand(o,d);normRes(o,d);normRoles(o,d);normWF(o,d);
   return o;
 }
 function relIssues(d){

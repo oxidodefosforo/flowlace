@@ -139,3 +139,36 @@
 .wfn-k{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
 .wfn-n{flex:none}
 .wfn{justify-content:flex-start;padding-top:7px}
+/* ---------- v20: arranged layout, editable arrows, roles ---------- */
+.wflay-bar{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin:2px 0 6px;padding:4px 6px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2)}
+.wflay-bar .btn.sm{padding:3px 9px}
+.wflay-sep{width:1px;align-self:stretch;background:var(--line-2);margin:0 4px}
+.wflay-e{font-size:12px;color:var(--fg-2)}
+.wflay-st{font-size:12px}
+.wfd-wrap.can-arrange .wfn{cursor:grab;touch-action:none}
+.wfn.dragging{cursor:grabbing;box-shadow:0 8px 22px rgba(16,24,40,.22);z-index:5}
+body.wf-dragging,body.wf-dragging *{user-select:none!important;cursor:grabbing}
+.wfd .wfn{user-select:none}
+.wfsvg{pointer-events:none}
+.wfe-hit{fill:none;stroke:transparent;stroke-width:14;pointer-events:stroke;cursor:pointer}
+.wfe.on{stroke:var(--accent);stroke-width:2.8}
+.wfe.man{stroke-linejoin:round}
+.wfh{fill:var(--surface);stroke:var(--accent);stroke-width:2;pointer-events:all}
+.wfh.v{cursor:ew-resize}.wfh.h{cursor:ns-resize}
+.wfd-wrap.editing .wfe{opacity:.9}
+.wfl-n{position:sticky;left:0;top:auto;display:inline-flex;padding:6px 8px;background:color-mix(in srgb,var(--surface) 92%,transparent);z-index:3;border-radius:0 0 6px 0;box-sizing:border-box}
+.wfl{border-top:1px dashed var(--line)}
+.chip.rolec{background:var(--accent-soft);color:var(--accent);border:0;font-weight:600}
+.chip.rolec.inact{background:var(--surface-2);color:var(--muted);text-decoration:line-through}
+.rolepick{position:relative}
+.rolepick>summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;gap:3px;align-items:center;min-height:30px;padding:3px 6px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface)}
+.rolepick>summary::-webkit-details-marker{display:none}
+.rolepick>summary::after{content:"▾";margin-left:auto;color:var(--muted);font-size:11px}
+.rolepick-m{position:absolute;z-index:30;top:calc(100% + 3px);left:0;min-width:200px;display:flex;flex-direction:column;gap:2px;padding:6px 8px;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;box-shadow:var(--shadow)}
+.wfc-x .rolepick-m{position:static;box-shadow:none;margin-top:4px}
+.wfmap{margin:4px 0 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:6px 10px}
+.wfmap>summary{cursor:pointer;font-size:13px}
+.wfmap-t{margin-top:6px}
+.wi-resp{display:inline-flex;flex-wrap:wrap;align-items:center;gap:4px;margin-left:6px}
+.wi-resp select.in.sm,.wi-as-t select.in.sm{padding:2px 6px;height:auto;max-width:220px}
+.wi-why.ok{color:var(--ok)}

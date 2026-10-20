@@ -11,18 +11,18 @@
   /* Shape version of the application data (S.version in the web build). Stored in the workspace. */
   const DATA_VERSION = 4;
   /* Lists of records with a stable id. One stored record per item. */
-  const COLLECTIONS = ['people', 'phases', 'services', 'projects', 'deliverables', 'tasks', 'projectPhases', 'projectTeams', 'assignments', 'capacityOverrides'];
+  const COLLECTIONS = ['people', 'roles', 'phases', 'services', 'projects', 'deliverables', 'tasks', 'projectPhases', 'projectTeams', 'assignments', 'capacityOverrides'];
   /* Single objects (one record each, id "_"). */
   const SINGLETONS = ['branding', 'company', 'defaults', 'resMeeting', 'workflow', 'workflowDraft'];
   const SINGLETON_ID = '_';
   /* Per-user state: never stored as shared records and never visible to other users. */
   const PERSONAL = ['views', 'favorites'];
   /* Company configuration: in a Company workspace only administrators may change it. */
-  const ADMIN_ONLY = ['phases', 'services', 'projectTeams', 'branding', 'company', 'defaults', 'workflow', 'workflowDraft'];
+  const ADMIN_ONLY = ['roles', 'phases', 'services', 'projectTeams', 'branding', 'company', 'defaults', 'workflow', 'workflowDraft'];
   /* Records that must point to an existing project. */
   const PROJECT_CHILDREN = ['deliverables', 'tasks', 'projectPhases', 'assignments'];
   const REQUIRED = {
-    people: { name: 'string' }, phases: { name: 'string' }, services: { name: 'string' }, projects: { name: 'string' },
+    people: { name: 'string' }, roles: { name: 'string' }, phases: { name: 'string' }, services: { name: 'string' }, projects: { name: 'string' },
     deliverables: { projectId: 'string' }, tasks: { projectId: 'string', name: 'string' },
     projectPhases: { projectId: 'string', phaseId: 'string' }, projectTeams: { name: 'string' },
     assignments: { projectId: 'string', personId: 'string' }, capacityOverrides: { personId: 'string' }
@@ -85,7 +85,7 @@
 
   /* Human-readable label for a record (conflict dialogs, activity log). */
   function recordLabel(coll, data) {
-    const names = { people: 'Person', phases: 'Phase', services: 'Discipline', projects: 'Project', deliverables: 'Deliverable', tasks: 'Task',
+    const names = { people: 'Person', roles: 'Role', phases: 'Phase', services: 'Discipline', projects: 'Project', deliverables: 'Deliverable', tasks: 'Task',
       projectPhases: 'Project phase', projectTeams: 'Project team', assignments: 'Planned hours', capacityOverrides: 'Capacity',
       branding: 'Appearance', company: 'Company details', defaults: 'Project defaults', resMeeting: 'Resources meeting', workflow: 'Company workflow', workflowDraft: 'Workflow draft' };
     const n = data && (data.name || data.code || data.weekStart) ? String(data.code && data.name ? data.code + ' ' + data.name : (data.name || data.code || data.weekStart)) : '';

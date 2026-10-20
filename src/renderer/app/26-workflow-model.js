@@ -4,11 +4,11 @@ function wfNormStd(w,phaseIds,svIds){
   if(!w||typeof w!=='object'||!Array.isArray(w.steps))return null;
   const ids=new Set(),steps=[];
   w.steps.forEach((s,i)=>{if(!s||!s.id||ids.has(s.id)||!phaseIds.has(s.phaseId))return;ids.add(s.id);
-    steps.push({id:String(s.id),phaseId:s.phaseId,serviceId:svIds.has(s.serviceId)?s.serviceId:null,cat:WF_CAT[s.cat]?s.cat:'action',name:String(s.name||'Untitled step').slice(0,160),desc:String(s.desc||''),deps:Array.isArray(s.deps)?s.deps.map(String):[],order:typeof s.order==='number'?s.order:i,retired:!!s.retired,createdAt:s.createdAt||null})});
+    steps.push({id:String(s.id),phaseId:s.phaseId,serviceId:svIds.has(s.serviceId)?s.serviceId:null,cat:WF_CAT[s.cat]?s.cat:'action',name:String(s.name||'Untitled step').slice(0,160),desc:String(s.desc||''),deps:Array.isArray(s.deps)?s.deps.map(String):[],order:typeof s.order==='number'?s.order:i,retired:!!s.retired,createdAt:s.createdAt||null,roleIds:[...new Set(arr(s.roleIds).map(String))]})});
   const byId=new Map(steps.map(s=>[s.id,s]));
   /* links across phases and specialties are kept; only self links, duplicates, missing or retired steps go */
   steps.forEach(s=>{s.deps=[...new Set(s.deps)].filter(d=>d!==s.id&&byId.has(d)&&!byId.get(d).retired)});
-  const std={version:Math.max(0,parseInt(w.version)||0),appliedAt:w.appliedAt||null,demo:!!w.demo,schema:2,demoV2:!!w.demoV2,steps};
+  const std={version:Math.max(0,parseInt(w.version)||0),appliedAt:w.appliedAt||null,demo:!!w.demo,schema:2,demoV2:!!w.demoV2,steps,layout:wfLayoutsNorm(w.layout)};
   steps.forEach(s=>{s.deps=s.deps.filter(d=>!wfReaches({steps},d,s.id))}); // break any loop in a hand-edited backup
   return std;
 }
@@ -31,7 +31,9 @@ function normWF(o,d){
     o.tasks.filter(t=>t.projectId===p.id&&t.wfStepId&&t.wfExecutionMode==='internal'&&steps.has(t.wfStepId)).forEach(t=>{const s=steps.get(t.wfStepId);
       if(!sc[s.phaseId]||sc[s.phaseId].migrated){sc[s.phaseId]=sc[s.phaseId]||{specs:[],importedAt:null,v:p.wfVersion,migrated:true};const sp=s.serviceId||'_none';if(!sc[s.phaseId].specs.includes(sp))sc[s.phaseId].specs.push(sp)}});
     p.wfScope=sc;
-    const dc={};if(p.wfDecide&&typeof p.wfDecide==='object')Object.entries(p.wfDecide).forEach(([k,v])=>{if(v==='internal'||v==='external')dc[k]=v});p.wfDecide=dc});
+    const dc={};if(p.wfDecide&&typeof p.wfDecide==='object')Object.entries(p.wfDecide).forEach(([k,v])=>{if(v==='internal'||v==='external')dc[k]=v});p.wfDecide=dc;
+    p.wfLayout=wfLayoutsNorm(p.wfLayout);   // visual adjustments of this project (never change the standard)
+    const pes=new Set(o.people.map(x=>x.id)),rm={};if(p.wfRoleMap&&typeof p.wfRoleMap==='object')Object.entries(p.wfRoleMap).forEach(([k,v])=>{if(/^[^|]+\|[^|]+$/.test(k)&&pes.has(v))rm[k]=v});p.wfRoleMap=rm});
 }
 
 /* ---------- refresh (never creates anything): definitions of the standard flow into the existing records ---------- */
