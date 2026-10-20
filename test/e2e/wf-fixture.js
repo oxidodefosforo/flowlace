@@ -3,7 +3,7 @@
    with a requirement from Fee ("Send architectural layouts and lighting brief…") shown as a reference. */
 const path = require('path');
 const fs = require('fs');
-module.exports = function makeFixture(dir) {
+module.exports = function makeFixture(dir, opts = {}) {
   const src = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'web-export.json'), 'utf8'));
   const d = src.data;
   const wfTasks = new Set(d.tasks.filter(t => t.wfStepId).map(t => t.id));
@@ -25,6 +25,11 @@ module.exports = function makeFixture(dir) {
     st('hy-ac1', 'ph-sd', Hy, 'action', 'Hydraulic schematic design', ['co-in1'], ['ro-bimm', 'ro-dft']),
     st('hy-out1', 'ph-sd', Hy, 'output', 'Hydraulic schematic report', ['hy-ac1'], ['ro-seng']),
     st('co-ac1', 'ph-sd', C, 'output', 'Services coordination report', ['el-out1', 'me-out2', 'hy-out1'], ['ro-bimc'])] };
+  if (opts.fine) {   // several arrows arriving at one activity, as in the screenshot of the request
+    d.workflow.steps.splice(4, 0, st('el-ac3', 'ph-sd', E, 'action', 'Prepare preliminary drawings', ['el-ac1', 'me-out1', 'co-in1'], ['ro-dft'], 'Preliminary electrical drawings.'));
+    d.workflow.steps.find(s => s.id === 'el-out1').deps.push('el-ac3');
+    d.workflow.steps.forEach((s, i) => { s.order = i; });
+  }
   d.workflowDraft = null;
   const f = path.join(dir, 'layout-fixture.json');
   fs.writeFileSync(f, JSON.stringify(src, null, 2));

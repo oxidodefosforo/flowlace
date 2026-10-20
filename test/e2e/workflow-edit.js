@@ -29,7 +29,7 @@ module.exports = async function run() {
   const go = async h => { await w.evaluate(x => { location.hash = x; }, h); await H.sleep(250); };
   const box = id => w.evaluate(i => { const el = document.getElementById('wfn-' + i); return el ? { x: parseFloat(el.style.left), y: parseFloat(el.style.top) } : null; }, id);
   const lane = l => w.evaluate(k => { const el = document.querySelector(`.wfl[data-lane="${k}"]`); return el ? { y: parseFloat(el.style.top), h: parseFloat(el.style.height) } : null; }, l);
-  const sepX = () => w.evaluate(() => { const s = document.querySelector('.wfzsep'); return s ? parseFloat(s.style.left) : null; });
+  const sepX = () => w.evaluate(() => { const s = document.querySelector('.wfzb[data-zb="2"]'); return s ? parseFloat(s.style.left) : null; });
   const ids = () => w.evaluate(() => [...document.querySelectorAll('.wfd .wfn')].map(n => n.dataset.id));
   const allPos = async () => { const l = await ids(), o = {}; for (const id of l) o[id] = await box(id); return o; };
   const edgeD = k => w.evaluate(x => { const p = document.querySelector(`path.wfe[data-k="${x}"]`); return p && p.getAttribute('d'); }, k);
@@ -97,7 +97,7 @@ module.exports = async function run() {
     assert.ok(/Other phases/.test(await w.textContent('.wfl[data-lane="_ref"]')), 'band “Other phases”');
     const sx = await sepX(), outs = await Promise.all(['el-out1', 'me-out2', 'hy-out1', 'co-ac1'].map(box)), acts = await Promise.all(['el-ac1', 'el-ac2', 'me-out1', 'me-ac2', 'hy-ac1'].map(box));
     assert.ok(sx > Math.max(...acts.map(p => p.x + W)) && sx < Math.min(...outs.map(p => p.x)), 'Outputs separator between Actions and Outputs');
-    assert.ok(/Outputs — Sketch/.test(await w.textContent('.wfzsep')), 'separator title with the phase');
+    assert.ok(/Outputs — Sketch/.test(await w.textContent('.wfz.z2 .wfz-h')), 'Outputs zone title with the phase');
     await H.shot(w, 'edit-zones');
   });
 
@@ -295,24 +295,24 @@ module.exports = async function run() {
     assert.ok(!rec(records(dbFile), 'workflowDraft').steps.find(s => s.id === 'el-ac1').deps.includes('el-out1'));
     // drag from the connection point of a block, then cancel the confirmation
     await w.click('[data-wflay=edit]');
-    const n = await center('#wfn-co-in1'), t = await center('#wfn-me-ac2');
-    await w.hover('#wfn-co-in1'); const dot = await center('#wfn-co-in1 .wfconn'); void n;
+    await w.hover('#wfn-co-in1'); const dot = await center('#wfn-co-in1 .wfconn');
+    const tb = await (await w.$('#wfn-me-out1')).boundingBox(), t = { x: tb.x + tb.width / 2, y: tb.y + tb.height / 2 };
     await w.mouse.move(dot.x, dot.y); await w.mouse.down(); await w.mouse.move(t.x, t.y, { steps: 10 }); await w.mouse.up();
     await H.until(() => w.evaluate(() => /Add this dependency\?/.test(document.getElementById('modal-root').textContent)), 3000, 'confirm after drag');
     await w.click('#modal-root [data-act=cf-no]'); await H.sleep(200);
-    assert.ok(!rec(records(dbFile), 'workflowDraft').steps.find(s => s.id === 'me-ac2').deps.includes('co-in1'), 'cancelled: nothing added');
+    assert.ok(!rec(records(dbFile), 'workflowDraft').steps.find(s => s.id === 'me-out1').deps.includes('co-in1'), 'cancelled: nothing added');
     await w.click('[data-wflay=edit]');
   });
 
   await step('8 · “Add prerequisite…” from the diagram uses the same picker, including other phases', async () => {
     await w.click('#wfn-me-in1'); await H.sleep(200);
     await w.click('[data-wflay=prereq]');
-    await H.until(() => w.evaluate(() => !!document.querySelector('#wfpre .wfdp')), 3000, 'dialog');
-    await w.click('#wfpre [data-wfdf=phases][data-v=_all]'); await H.sleep(150);
-    await w.check('#wfpre input[data-wfdep="me-in1"][value="fee-co-out"]'); await H.saved(w);
+    await H.until(() => w.evaluate(() => !!document.querySelector('#wffloat .wfdp')), 3000, 'dialog');
+    await w.click('#wffloat [data-wfdf=phases][data-v=_all]'); await H.sleep(150);
+    await w.check('#wffloat input[data-wfdep="me-in1"][value="fee-co-out"]'); await H.saved(w);
     assert.ok(rec(records(dbFile), 'workflowDraft').steps.find(s => s.id === 'me-in1').deps.includes('fee-co-out'));
-    assert.ok(/Send architectural layouts/.test(await w.textContent('#wfpre .wfdp-sel')));
-    await w.click('#modal-root [data-act=modal-close]');
+    assert.ok(/Send architectural layouts/.test(await w.textContent('#wffloat .wfdp-sel')));
+    await w.click('#wffloat .wff-f [data-wff-close]');
     await checkOrder('after adding dependencies');
   });
 

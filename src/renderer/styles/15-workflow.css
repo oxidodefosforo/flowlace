@@ -222,3 +222,34 @@ table.ppl td{vertical-align:top}
 .wfdp-r.dis{opacity:.6}
 .wfdp-why{display:block;color:var(--danger)!important}
 .wfdp-none{margin:4px 0}
+/* ---------- v22: visible zones, zoom, block menu, floating editor ---------- */
+.wfd-zoom{position:relative}
+.wfd{transform-origin:0 0}
+.wfz{position:absolute;top:0;pointer-events:none;z-index:0}
+.wfz.z0{background:color-mix(in srgb,var(--wf-in) 4%,transparent)}
+.wfz.z1{background:color-mix(in srgb,var(--wf-ac) 3%,transparent)}
+.wfz.z2{background:color-mix(in srgb,var(--wf-out) 5%,transparent)}
+.wfz-h{position:sticky;top:0;display:inline-block;margin:4px 0 0 8px;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.wfz.z0 .wfz-h{color:var(--wf-in)}.wfz.z1 .wfz-h{color:var(--wf-ac)}.wfz.z2 .wfz-h{color:var(--wf-out)}
+.wfzb{position:absolute;top:0;width:0;border-left:1.5px dashed var(--line-2);pointer-events:none;z-index:1}
+.wfzb.out{border-left:2px dotted color-mix(in srgb,var(--wf-out) 55%,var(--line-2))}
+.wfd-wrap.editing .wfzb{pointer-events:auto;cursor:col-resize}
+.wfd-wrap.editing .wfzb::before{content:"";position:absolute;left:-7px;top:0;bottom:0;width:14px}
+.wfd-wrap.editing .wfzb:hover{border-left-color:var(--accent);border-left-style:solid}
+.wfe.dim{opacity:.35}
+.wfe-hit{stroke-width:16}
+.wfzoom{display:inline-flex;gap:0;align-items:center;margin-left:4px}
+.wfzoom .btn.sm{padding:3px 7px;min-width:28px}
+.wfmenu{position:absolute;z-index:8;display:flex;flex-direction:column;min-width:176px;padding:4px;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;box-shadow:var(--shadow)}
+.wfmenu button{text-align:left;border:0;background:none;padding:6px 10px;border-radius:5px;font:inherit;font-size:13px;color:var(--fg);cursor:pointer}
+.wfmenu button:hover,.wfmenu button:focus-visible{background:var(--accent-soft);color:var(--accent);outline:none}
+.wffloat{position:fixed;z-index:70;display:flex;flex-direction:column;max-height:calc(100vh - 90px);background:var(--surface);border:1px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow)}
+.wff-h{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;padding:10px 12px 6px;border-bottom:1px solid var(--line)}
+.wff-h .x{border:0;background:none;font-size:20px;line-height:1;cursor:pointer;color:var(--muted)}
+.wff-b{padding:10px 12px;overflow:auto;display:flex;flex-direction:column;gap:8px;overscroll-behavior:contain}
+.wff-f{display:flex;justify-content:flex-end;padding:8px 12px;border-top:1px solid var(--line)}
+
+/* v1.3: the second row of the bar always exists and never wraps, so selecting something never moves the diagram */
+.wflay-ctx{flex:1 0 100%;display:flex;align-items:center;gap:6px;height:32px;box-sizing:border-box;white-space:nowrap;overflow-x:auto;overflow-y:hidden;border-top:1px solid var(--line);padding-top:4px;scrollbar-width:thin}
+.wflay-ctx .wflay-e{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.wflay-ctx .btn{flex:none}

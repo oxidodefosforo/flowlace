@@ -43,9 +43,9 @@ document.addEventListener('change',e=>{const el=e.target;if(!el.dataset)return;
     const d=el.closest('details.rolepick'),sm=d&&d.querySelector('summary');if(sm)sm.innerHTML=pe.roleIds.length?roleChips(pe.roleIds):'<span class="muted">No role</span>';
     document.querySelectorAll('table.roles tr').forEach(tr=>{const i=tr.querySelector('[data-role][data-f=name]');if(!i)return;const id=i.dataset.role,c=tr.querySelector('td.meta');if(c){const u=S.people.filter(x=>(x.roleIds||[]).includes(id)).length,w=wfEdit().steps.filter(x=>!x.retired&&(x.roleIds||[]).includes(id)).length;c.textContent=[u&&plural(u,'person','people'),w&&plural(w,'workflow step')].filter(Boolean).join(' · ')||'—'}});return}
   if(el.dataset.wfrole){const dr=wfDraft(),s=wfStep(el.dataset.wfrole,dr);if(!s)return;const set=new Set(s.roleIds||[]);el.checked?set.add(el.value):set.delete(el.value);s.roleIds=rolesSorted([...set]);save(true);setSaveInd();render();
-    const c=document.querySelector(`[data-wfrole="${s.id}"][value="${el.value}"]`);if(c){c.closest('details').open=true;c.focus()}return}
+    const c=document.querySelector(`[data-wfrole="${s.id}"][value="${el.value}"]`);if(c){c.closest('details').open=true;c.focus({preventScroll:true})}return}
   if(el.dataset.wfmap){const p=project(el.dataset.pid);if(!p)return;p.wfRoleMap={...(p.wfRoleMap||{})};if(el.value)p.wfRoleMap[el.dataset.wfmap]=el.value;else delete p.wfRoleMap[el.dataset.wfmap];p.updatedAt=new Date().toISOString();save();render();
-    const c=document.querySelector(`[data-wfmap="${el.dataset.wfmap}"]`);if(c){const d=c.closest('details');if(d)d.open=true;c.focus()}return}
+    const c=document.querySelector(`[data-wfmap="${el.dataset.wfmap}"]`);if(c){const d=c.closest('details');if(d)d.open=true;c.focus({preventScroll:true})}return}
 },true);
 document.addEventListener('submit',e=>{const f=e.target;if(f.dataset.form!=='role-add')return;e.preventDefault();e.stopImmediatePropagation();
   const v=f.elements.name.value.trim().slice(0,60);if(!v){fieldError(f.elements.name,'Type a name first.');return}
@@ -111,7 +111,7 @@ function abrBody(){
       return `<tr><td><b>${esc(s.name)}</b> <small class="muted">${esc(phName(s.phaseId))}</small></td><td>${esc(wfSpecName(wfSpecOf(s)))}</td><td>${roleChips(s.roleIds)||'<span class="muted">—</span>'}</td><td>${wfProposeSelect('data-abr',t.id,pr,a.sel[t.id])} ${wfProposeNote(pr,a.sel[t.id])}</td></tr>`}).join('')}</tbody></table>
     <div class="m-actions"><span class="muted" style="margin-right:auto">${plural(n,'activity','activities')} will be assigned${ts.length-n?` · ${ts.length-n} stay unassigned`:''}</span><button type="button" class="btn ghost" data-act="modal-close">Cancel</button><button class="btn primary" id="abr-ok"${n?'':' disabled'}>Assign</button></div>`;
 }
-document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.abr||!ui.abr)return;ui.abr.sel[el.dataset.abr]=el.value;const b=document.getElementById('abr-body');if(b){const sc=b.scrollTop;b.innerHTML=abrBody();b.scrollTop=sc;const f=document.querySelector(`[data-abr="${el.dataset.abr}"]`);f&&f.focus()}},true);
+document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||!el.dataset.abr||!ui.abr)return;ui.abr.sel[el.dataset.abr]=el.value;const b=document.getElementById('abr-body');if(b){const sc=b.scrollTop;b.innerHTML=abrBody();b.scrollTop=sc;const f=document.querySelector(`[data-abr="${el.dataset.abr}"]`);f&&f.focus({preventScroll:true})}},true);
 document.addEventListener('submit',e=>{const f=e.target;if(f.dataset.form!=='wf-abr')return;e.preventDefault();e.stopImmediatePropagation();
   const a=ui.abr,now=new Date().toISOString();let n=0;
   Object.entries(a.sel).forEach(([id,pe])=>{const t=S.tasks.find(x=>x.id===id);if(!t||!pe||t.assignedToId||!person(pe))return;t.assignedToId=pe;t.updatedAt=now;n++});

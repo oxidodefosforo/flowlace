@@ -182,7 +182,7 @@ En **Settings → Workspace & Storage → Backups** (en Company, solo los admini
 
 ## 9. Workflow: ordenar el diagrama y asignar por roles
 
-**Zonas.** Cada fase se organiza de izquierda a derecha en tres zonas invisibles: **Inputs → Actions → Outputs**. Una línea punteada con el título "Outputs — [fase]" marca el inicio de los Outputs. Es solo una referencia visual: no intercepta clics y las flechas pueden atravesarla.
+**Zonas.** Cada fase se organiza de izquierda a derecha en tres zonas: **Inputs → Actions → Outputs**. Se ven por defecto, con su encabezado, un fondo apenas distinto y una línea vertical entre zonas (la de Outputs es punteada y lleva el título "Outputs — [fase]"). **Hide zones / Show zones** oculta o muestra estas guías sin mover nada. En **Edit layout** las líneas verticales se pueden arrastrar (ver más abajo).
 
 - **Actividades nuevas:** se colocan al inicio de su zona, a la izquierda de la primera de su categoría y en el carril de su especialidad. Si no hay sitio, los bloques de la derecha se desplazan.
 - **Outputs sin dependencias:** aparecen siempre en la zona de Outputs.
@@ -198,19 +198,38 @@ En **Settings → Workspace & Storage → Backups** (en Company, solo los admini
 - **Varios bloques:** con **Edit layout**, Mayús o Ctrl + clic selecciona varios. El primero es la referencia fija. Están disponibles **Align columns**, **Align rows** y **Distribute**. Lo que no puede moverse por una dependencia, una zona o una superposición se queda donde estaba y se explica por qué.
 - **Teclado:** Alt + flechas mueve el bloque enfocado. **Esc** cancela un arrastre y lo devuelve a su sitio.
 
-**Ajustar flechas (Edit layout + clic en una flecha)**
+**Ajustar flechas (clic sobre la línea)**
 
-- **Segmentos y quiebres:** arrastra cualquier tramo. Doble clic en la línea añade un quiebre; doble clic en un control lo quita.
-- **Puntos de origen y destino:** arrastra los círculos de los extremos a cualquiera de los cuatro bordes de su bloque (arriba, abajo, izquierda, derecha) y a lo largo de ese borde. El borde se resalta y el recorrido se recalcula. Si sueltas lejos del bloque, la flecha vuelve a donde estaba. La dependencia nunca cambia.
-- **Reset route** devuelve solo esa flecha a su recorrido y anclajes automáticos.
+- **Seleccionar:** haz clic directamente sobre la flecha; el área sensible es algo más ancha que la línea. Solo esa flecha queda resaltada (las demás se atenúan) y la barra muestra su nombre y sus acciones. Si varias flechas pasan por el mismo sitio, cada clic selecciona la siguiente y un aviso indica cuántas hay. **Esc** o un clic en el fondo quita la selección. Seleccionar o arrastrar una flecha nunca mueve el lienzo ni los bloques.
+- **Segmentos:** cada tramo tiene un pequeño cuadrado. Un tramo vertical se arrastra a izquierda o derecha (cursor ↔) y uno horizontal hacia arriba o abajo (cursor ↕); los tramos vecinos se ajustan y los extremos siguen unidos a sus actividades. Ejemplo: si varias flechas llegan a "Prepare preliminary drawings", selecciona una y lleva su tramo vertical a la izquierda, selecciona otra y llévala a la derecha.
+- **Puntos de paso:** doble clic en la línea añade un quiebre; doble clic en un cuadrado lo quita.
+- **Origen y destino:** arrastra el círculo de cada extremo a cualquiera de los cuatro bordes de su bloque (arriba, abajo, izquierda, derecha) y a lo largo de ese borde. El borde se resalta, el recorrido se recalcula para la nueva dirección y la dependencia no cambia. Si sueltas lejos del bloque o pulsas **Esc**, el extremo vuelve a donde estaba. Se guardan el borde y la posición relativa, así que siguen igual al mover el bloque.
+- **Reconnect source… / Reconnect target…** (Company workflow): cambia la actividad de origen o de destino de la flecha seleccionada. Haz clic en la nueva actividad y confirma. Duplicados, autorreferencias y ciclos se rechazan con la explicación; si cancelas o no es válido, la relación original se conserva. El extremo que no cambia mantiene su anclaje.
+- **Reset selected route** devuelve solo esa flecha al recorrido y anclajes automáticos. **Reset all routes** hace lo mismo con todas las flechas de la vista. Ninguno cambia dependencias ni posiciones de bloques.
+- **Al mover bloques:** las flechas automáticas se recalculan como siempre. Las ajustadas conservan sus anclajes y su recorrido; solo se recalcula una flecha ajustada si sus bloques se movieron y el recorrido guardado atravesaría otro bloque. Las flechas no afectadas no cambian. **Auto layout** recoloca los bloques y conserva los ajustes de flechas que siguen siendo válidos.
 - **Rounded** suaviza las esquinas, solo visualmente.
-- **Al mover bloques,** los anclajes y recorridos manuales los acompañan.
+
+**Ancho de las zonas (Edit layout)**
+
+- Arrastra la línea **Inputs | Actions** para reducir o ampliar el espacio entre Inputs y Actions; Actions y Outputs se desplazan con ella. La línea **Actions | Outputs** hace lo mismo con Outputs. Las posiciones verticales no cambian y las flechas se actualizan mientras arrastras.
+- Hay una separación mínima: no se pueden superponer bloques ni crear coordenadas inválidas.
+- **Fit zones to content** elimina el espacio sobrante entre y dentro de las zonas, manteniendo el orden.
+- Sigue funcionando lo anterior: mover una actividad puede ampliar su carril o empujar las zonas posteriores.
+
+**Editar una actividad sin salir del diagrama** (Company workflow)
+
+1. Haz clic en la actividad (Input, Action u Output). Queda seleccionada y aparece un pequeño menú a su lado. La página, el diagrama y el zoom no se mueven, y no se salta a la matriz.
+2. **Add prerequisites…** abre el selector flotante junto al bloque: búsqueda, filtros Type, Service y Phase, selección múltiple, las dependencias ya elegidas (aunque los filtros las oculten) y opciones desactivadas con el motivo si crearían un ciclo. Cada cambio se guarda al momento, las flechas y la matriz se actualizan y el bloque sigue seleccionado y visible.
+3. **Show details…** abre los campos de la actividad (nombre, descripción, especialidad, categoría, roles, dependencias) en un panel flotante. Los cambios se reflejan en la tarjeta de la matriz.
+4. **Done**, × o **Esc** cierran el panel sin saltos de pantalla y devuelven el foco al bloque.
+
+**Zoom:** **−**, el porcentaje (vuelve a 100 %) y **+**, de 50 % a 150 %. Todos los controles funcionan con cualquier zoom.
 
 **Agregar dependencias desde el diagrama** (Company workflow)
 
 - **Connect:** haz clic en A (lo que se necesita) y luego en B (lo que lo necesita). **A → B significa que B depende de A.** Se confirma antes de guardar.
 - **Arrastrando:** con Edit layout, arrastra desde el punto de conexión en el borde derecho de un bloque hasta otro bloque.
-- **Add prerequisite…:** aparece al seleccionar una actividad y abre el selector con filtros, incluidas otras fases.
+- **Add prerequisites…:** desde el menú del bloque (ver arriba), con filtros e incluidas otras fases.
 - **Validaciones:** los duplicados, las autorreferencias y los ciclos se rechazan con la explicación.
 - **Desde un proyecto:** "Edit in Company workflow" abre esa actividad en el estándar.
 
@@ -221,11 +240,13 @@ En **Settings → Workspace & Storage → Backups** (en Company, solo los admini
 - el número de resultados;
 - las dependencias elegidas, que se muestran aparte aunque los filtros las oculten. Los filtros nunca las quitan.
 
-**Barra:** Edit layout · Undo / Redo · Auto layout · Reset layout · Connect · Rounded. Cada arrastre, alineación o ajuste de flecha es **una sola operación** para Undo / Redo: bloques, carriles, zonas, recorridos y anclajes a la vez. **Reset layout** vuelve, en el estándar, a la distribución publicada; en un proyecto, a la del estándar.
+**Barra:** Edit layout · Undo / Redo · Auto layout · Reset layout · Reset all routes · Fit zones to content · Connect · Hide/Show zones · Rounded · zoom. Debajo, una segunda fila de altura fija muestra lo seleccionado y sus acciones; como no cambia de alto, seleccionar algo nunca desplaza el diagrama.
+
+**Undo / Redo:** cada arrastre, alineación o ajuste es **una sola operación**, y restaura a la vez bloques, carriles, anchos de zona, segmentos, puntos de paso y anclajes. En el Company workflow también deshace las dependencias agregadas o quitadas desde el diagrama o el selector flotante y los cambios hechos con Reconnect. **Reset layout** vuelve, en el estándar, a la distribución publicada; en un proyecto, a la del estándar.
 
 **Dónde se guarda la distribución**
 
-- **Por fase, separada de la estructura:** se guarda aparte de las actividades y dependencias. Incluye posiciones relativas al carril, altura de carriles, inicio de zonas, recorridos y anclajes (borde + posición relativa).
+- **Por fase, separada de la estructura:** se guarda aparte de las actividades y dependencias. Incluye posiciones relativas al carril, altura de carriles, inicio y ancho de zonas, recorridos, puntos de paso y anclajes (borde + posición relativa), identificados por los ids estables de las actividades.
 - **En el estándar:** forma parte del borrador y se publica con **Save and publish**.
 - **En cada proyecto:** el proyecto parte de la distribución del estándar y guarda sus ajustes propios, que nunca cambian el estándar.
 - **Se mantiene** al cambiar de fase, filtrar, navegar entre proyectos, reiniciar y exportar o importar.
@@ -264,6 +285,7 @@ Se ejecutó todo en Linux (Ubuntu 24.04) con Electron 43.7.7 real, en pantalla v
 | Company, servidor real + **dos clientes** Electron: conexión, importación, mismo contenido en ambos, permisos de miembro, **cambios en vivo sin cerrar el panel**, edición en curso no interrumpida, **desconexión y reconexión**, **conflicto sobre la misma tarea**, preferencias por usuario, auditoría, **restauración** con recarga de ambos clientes | 12/12 ✓ |
 | Workflow (13 comprobaciones): bajar "Preliminary design sketches and notes" amplía Electrical y desplaza los carriles inferiores sin superposiciones; mover "Preliminary equipment load" desplaza el conjunto de la derecha y se detiene ante su predecesor; undo/redo de movimientos completos; flecha editada que se conserva al cambiar de vista, al publicar y al reiniciar; filtros que conservan posiciones; proyecto basado en el estándar con ajustes propios; roles con propuesta, selección manual, mapeo y "Assign by role" sin tocar asignaciones previas; exportación JSON con distribución y roles; datos existentes íntegros | 13/13 ✓ |
 | Edición del workflow (20 comprobaciones): People antes y después de usar el diagrama, incluso con un arrastre interrumpido; zonas Inputs → Actions → Outputs al crear y con Auto layout; referencias de otras fases en la zona de Inputs; carriles y separador de Outputs que se desplazan en tiempo real; secuencia y dependencias conservadas; filtros de "Depends on"; tarjetas independientes; guías y alineación; origen de la flecha de "Send architectural layouts…" en el borde superior; anclajes y recorridos que siguen a los bloques; Connect A → B; duplicados y ciclos rechazados; Undo/Redo; reinicio; datos íntegros | 20/20 ✓ |
+| Edición fina del workflow (18 comprobaciones, con "Prepare preliminary drawings" recibiendo tres flechas): selección por clic y flechas superpuestas; separar dos tramos verticales (izquierda/derecha) con cursor y vista previa; subir y bajar tramos horizontales; añadir y quitar quiebres; cambiar origen (abajo) y destino (arriba) sin desconectar, con Esc y suelta inválida; Reconnect con duplicado, autorreferencia, ciclo, cancelación y caso válido; ajustes que se conservan al mover bloques y flechas que no atraviesan bloques; flechas automáticas idénticas tras Reset all routes; Reset selected route; Auto layout conservando ajustes; arrastrar separadores (reducir, mínimo, ampliar) y Fit zones to content; orden, especialidad y dependencias; clic en un bloque sin mover página, diagrama ni zoom; Add prerequisites y Show details flotantes; controles al 80 % y 120 %; Undo/Redo de todo lo anterior; guardado al cambiar de fase y vista, publicar, reiniciar, exportar e importar; ajustes de proyecto separados del estándar; People y navegación intactos | 18/18 ✓ |
 | Paquete de servidor: `node.exe` de Windows ejecutado con Wine (init, serve, login, commit, backup) | ✓ |
 
 **Compilación de Windows:** `FlowlaceSetup.exe` (Squirrel), el zip portátil y el paquete de Flowlace Server se generaron en Linux con Wine y Mono. Se verificó que `Flowlace.exe` lleva el icono, el nombre y los metadatos.

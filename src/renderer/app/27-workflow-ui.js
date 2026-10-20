@@ -46,15 +46,17 @@ function wfStdCard(s,ed,i,n){
     <div class="wfc-h"><input class="in wfc-n" id="wfs-${s.id}-n" data-wfs="${s.id}" data-f="name" value="${esc(s.name)}" maxlength="160" aria-label="Step name"><span class="wfc-ord" aria-label="Order"><button class="iconbtn" data-act="wf-move" data-id="${s.id}" data-d="-1" aria-label="Move up"${i?'':' disabled'}>↑</button><button class="iconbtn" data-act="wf-move" data-id="${s.id}" data-d="1" aria-label="Move down"${i<n-1?'':' disabled'}>↓</button></span></div>
     ${s.desc&&!open?`<div class="wfc-desc">${esc(s.desc)}</div>`:''}
     <div class="wfc-tg"><button type="button" class="linkbtn wfc-more" data-act="wf-exp" data-id="${s.id}" aria-expanded="${!!open}" aria-controls="wfc-x-${s.id}">${open?'Hide details':'Show details'}</button></div>
-    ${open?`<div class="wfc-x" id="wfc-x-${s.id}">
-      <label class="cp-in"><span>Description / instructions</span><textarea class="in" rows="2" id="wfs-${s.id}-d" data-wfs="${s.id}" data-f="desc">${esc(s.desc)}</textarea></label>
-      <div class="wfc-2"><label class="cp-in"><span>Specialty</span><select class="in" id="wfs-${s.id}-s" data-wfs="${s.id}" data-f="serviceId">${s.serviceId?'':'<option value="" selected>To classify</option>'}${wfSpecs(ed).filter(x=>x!=='_none').map(id=>`<option value="${id}"${id===s.serviceId?' selected':''}>${esc(wfSpecName(id))}</option>`).join('')}</select></label>
-      <label class="cp-in"><span>Category</span><select class="in" id="wfs-${s.id}-c" data-wfs="${s.id}" data-f="cat">${WF_COLS.map(([k])=>`<option value="${k}"${k===s.cat?' selected':''}>${WF_CAT[k]}</option>`).join('')}</select></label></div>
+    ${open?`<div class="wfc-x" id="wfc-x-${s.id}">${wfStepFields(s,ed,'wfs')}</div>`:''}</div>`;
+}
+/* the editable fields of a step: used by the matrix card and by the floating editor of the diagram */
+function wfStepFields(s,ed,pf){const used=wfStd().steps.some(x=>x.id===s.id);
+  return `<label class="cp-in"><span>Description / instructions</span><textarea class="in" rows="2" id="${pf}-${s.id}-d" data-wfs="${s.id}" data-f="desc">${esc(s.desc)}</textarea></label>
+      <div class="wfc-2"><label class="cp-in"><span>Specialty</span><select class="in" id="${pf}-${s.id}-s" data-wfs="${s.id}" data-f="serviceId">${s.serviceId?'':'<option value="" selected>To classify</option>'}${wfSpecs(ed).filter(x=>x!=='_none').map(id=>`<option value="${id}"${id===s.serviceId?' selected':''}>${esc(wfSpecName(id))}</option>`).join('')}</select></label>
+      <label class="cp-in"><span>Category</span><select class="in" id="${pf}-${s.id}-c" data-wfs="${s.id}" data-f="cat">${WF_COLS.map(([k])=>`<option value="${k}"${k===s.cat?' selected':''}>${WF_CAT[k]}</option>`).join('')}</select></label></div>
       <div class="cp-in"><span>Responsible role(s)</span>${rolePicker('data-wfrole',s.id,s.roleIds,'Responsible roles of '+esc(s.name))}<small class="hint">Expected role; the person is resolved in each project (mapping or people with this specialty and role).</small></div>
       ${wfDepPicker(s,ed)}
-      <div class="row"><span class="muted" style="font-size:11.5px">Step id: ${esc(s.id)}</span><span class="spacer"></span><button class="btn sm ghost danger-t" data-act="wf-retire" data-id="${s.id}">${used?'Retire step…':'Remove step'}</button></div></div>`:''}</div>`;
-}
-function wfMutate(fn){const dr=wfDraft();fn(dr);save(true);setSaveInd();render()}
+      <div class="row"><span class="muted" style="font-size:11.5px">Step id: ${esc(s.id)}</span><span class="spacer"></span><button class="btn sm ghost danger-t" data-act="wf-retire" data-id="${s.id}">${used?'Retire step…':'Remove step'}</button></div>`}
+function wfMutate(fn){const dr=wfDraft();fn(dr);save(true);setSaveInd();wfRerender()}   // the view keeps its scroll
 function wfAddStep(cat,ph,name,spec){wfMutate(dr=>{const col=wfColSteps(dr,ph,cat),st={id:uid('ws'),phaseId:ph,serviceId:service(spec)?spec:null,cat,name,desc:'',deps:[],order:0,retired:false,createdAt:new Date().toISOString(),roleIds:[]};
   /* in the diagram a new activity goes at the start of its zone (cards of new activities start collapsed) */
   st.order=col.length?Math.max(...col.map(x=>x.order))+1:0;dr.steps.push(st);wfInsertInLayout(dr,st)})}
@@ -169,7 +171,7 @@ function wfImportBody(){
   h+=`</div><div class="m-actions"><span class="muted" style="margin-right:auto">${n?`${plural(R.newInt.length,'activity','activities')} and ${plural(R.newExt.length,'external input')} will be created`:'No new records'}${c?` · ${plural(c,'change')}`:''}</span><button type="button" class="btn ghost" data-act="modal-close">Cancel</button><button class="btn primary" id="wi-ok"${any?'':' disabled'}>Import</button></div>`;
   return h;
 }
-function wfImportRefresh(focusSel){const b=document.getElementById('wi-body');if(!b)return;const sc=b.scrollTop;b.innerHTML=wfImportBody();b.scrollTop=sc;const f=focusSel&&document.querySelector(focusSel);f&&f.focus()}
+function wfImportRefresh(focusSel){const b=document.getElementById('wi-body');if(!b)return;const sc=b.scrollTop;b.innerHTML=wfImportBody();b.scrollTop=sc;const f=focusSel&&document.querySelector(focusSel);f&&f.focus({preventScroll:true})}
 document.addEventListener('change',e=>{const el=e.target;if(!el.closest||!el.closest('#wi')||!ui.wi)return;const w=ui.wi;
   if(el.dataset.wiph){w.sel[el.dataset.wiph].on=el.checked;wfImportRefresh(`[data-wiph="${el.dataset.wiph}"]`);return}
   if(el.dataset.wisp){const v=w.sel[el.dataset.wisp];el.checked?v.specs.add(el.value):v.specs.delete(el.value);v.suggested=false;wfImportRefresh(`[data-wisp="${el.dataset.wisp}"][value="${el.value}"]`);return}
