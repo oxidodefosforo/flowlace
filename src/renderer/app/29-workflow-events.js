@@ -26,7 +26,7 @@ document.addEventListener('change',e=>{const el=e.target;if(!el.dataset||el.data
   const t=S.tasks.find(x=>x.id===el.dataset.id);if(!t||!t.wfStepId)return;e.stopImmediatePropagation();
   el.value=f==='name'?t.name:(t[f]||'');toast(f==='name'?'Workflow task names come from Settings → Company workflow.':f==='deliverableId'?'Link workflow tasks to deliverables as requirements (in the deliverable panel), so one task can serve several deliveries.':'Workflow tasks stay in their project and phase.','err')},true);
 document.addEventListener('submit',e=>{const f=e.target;if(f.dataset.form!=='wf-add')return;e.preventDefault();e.stopImmediatePropagation();
-  const v=f.elements.name.value.trim();if(!v){fieldError(f.elements.name,'Type a name first.');return}ui.focusAfter=f.elements.name.id;wfAddStep(f.dataset.cat,f.dataset.ph,v.slice(0,160),f.elements.spec.value)},true);
+  const v=f.elements.name.value.trim();if(!v){fieldError(f.elements.name,'Type a name first.');return}ui.focusAfter=f.elements.name.id;const ph=f.dataset.ph||(f.elements.ph&&f.elements.ph.value);if(!phase(ph))return;wfAddStep(f.dataset.cat,ph,v.slice(0,160),f.elements.spec.value)},true);
 document.addEventListener('click',e=>{const c=e.target.closest&&e.target.closest('[data-wfc]');if(!c||e.target.closest('input,select,textarea,[data-act]:not([data-wfsel])'))return;
   const id=c.dataset.wfc;if(ui.wfSel===id&&!e.target.closest('[data-wfsel]'))return;wfSelect(id)});
 function wfSelect(id){ui.wfSel=id;
@@ -43,7 +43,7 @@ function wfAct(act,a){
     case 'wf-pphase':prefs.wfPhase={...(prefs.wfPhase||{}),[a.dataset.pid]:a.dataset.v};ui.wfSel=null;savePrefs();render();return true;
     case 'wf-pspec':prefs.wfSpecs={...(prefs.wfSpecs||{}),[a.dataset.pid]:wfToggleSpec((prefs.wfSpecs||{})[a.dataset.pid],a.dataset.v,wfSpecs())};savePrefs();render();{const b=document.querySelector(`[data-act=wf-pspec][data-v="${a.dataset.v}"]`);b&&b.focus({preventScroll:true})}return true;
     case 'wf-node':{if(ui.view==='project'&&a.dataset.tid){ui.wfSel=id;openPanel('task',a.dataset.tid);return true}if(ui.view==='project'){toast('This requirement has no record in the project yet. Use Import activities to bring it in or mark it as an external input.');return true}wfSelect(id);return true}   // selecting never scrolls to the matrix
-    case 'wf-sel':{const s=wfStep(id,wfEdit());if(s&&ui.view==='settings'&&s.phaseId!==prefs.wfSetPhase){prefs.wfSetPhase=s.phaseId;savePrefs()}wfSelect(id);return true}
+    case 'wf-sel':{const s=wfStep(id,wfEdit());if(s&&ui.view==='settings'&&prefs.wfSetPhase!=='_all'&&s.phaseId!==prefs.wfSetPhase){prefs.wfSetPhase=s.phaseId;savePrefs()}wfSelect(id);return true}
     case 'wf-exp':ui.wfExp=ui.wfExp||new Set();ui.wfExp.has(id)?ui.wfExp.delete(id):ui.wfExp.add(id);ui.wfSel=id;render();{const b=document.querySelector(`[data-act=wf-exp][data-id="${id}"]`);b&&b.focus({preventScroll:true})}return true;
     case 'wf-move':{const dr=wfDraft(),s=wfStep(id,dr);if(!s)return true;const col=wfColSteps(dr,s.phaseId,s.cat),i=col.indexOf(s),j=i+(+a.dataset.d);if(j<0||j>=col.length)return true;
       col.splice(i,1);col.splice(j,0,s);col.forEach((x,k)=>x.order=k);save(true);setSaveInd();render();const b=document.querySelector(`[data-act=wf-move][data-id="${id}"][data-d="${a.dataset.d}"]:not([disabled])`)||document.querySelector(`[data-act=wf-move][data-id="${id}"]:not([disabled])`);b&&b.focus({preventScroll:true});return true}

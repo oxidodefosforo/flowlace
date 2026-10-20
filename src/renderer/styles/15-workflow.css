@@ -12,7 +12,7 @@
 .wfph .cnt{font-size:11px;color:var(--muted)}
 .wfbar{display:inline-block;width:46px;height:6px;border-radius:3px;background:var(--line);overflow:hidden;vertical-align:middle}
 .wfbar i{display:block;height:100%;background:var(--ok,#2E8B57)}
-.wfd-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-height:62vh}
+.wfd-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-height:70vh}
 .wfd{position:relative;margin:0}
 .wfd svg{position:absolute;inset:0;overflow:visible}
 .wfe{fill:none;stroke:var(--line-2);stroke-width:1.6}
@@ -253,3 +253,26 @@ table.ppl td{vertical-align:top}
 .wflay-ctx{flex:1 0 100%;display:flex;align-items:center;gap:6px;height:32px;box-sizing:border-box;white-space:nowrap;overflow-x:auto;overflow-y:hidden;border-top:1px solid var(--line);padding-top:4px;scrollbar-width:thin}
 .wflay-ctx .wflay-e{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .wflay-ctx .btn{flex:none}
+
+/* v1.4 · All phases: a header per phase (name and colour) and a solid boundary between phases */
+.wfd.glob .wfz-h{margin-top:calc(var(--wf-ph,26px) + 2px)}
+.wfphz{position:absolute;top:0;height:24px;display:flex;align-items:center;padding:0;box-sizing:border-box;border-bottom:2px solid var(--c);background:color-mix(in srgb,var(--c) 10%,var(--surface));font-size:12px;white-space:nowrap;pointer-events:none;z-index:2}
+.wfphz b{position:sticky;left:calc(var(--wf-lw,116px) + 8px);display:inline-flex;align-items:center;gap:6px;padding:0 10px;max-width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis}
+.wfphz .sw{width:9px;height:9px;border-radius:2px;background:var(--c);flex:none}
+.wfzb.ph{border-left:2px solid color-mix(in srgb,var(--c) 70%,var(--line-2))}
+/* v1.4 · Full screen: the diagram covers the window; the rest of the page stays as it was underneath */
+.wfdia.fs{position:fixed;inset:0;z-index:45;background:var(--bg);display:flex;flex-direction:column;padding:8px 10px 6px;gap:4px;box-sizing:border-box}
+.ws.has-panel .wfdia.fs{right:min(50vw,760px)}
+body:has(.wfdia.fs) .top{display:none}
+body:has(.wfdia.fs) #main{overflow:hidden}
+.wfdia.fs .wflay-bar{margin:0;flex:none}
+.wfdia.fs .wfd-wrap{flex:1 1 auto;min-height:0;max-height:none;height:auto}
+.wfdia.fs .wfkey{flex:none;margin:0 2px}
+.wffs-head{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.wffs-head .wfph,.wffs-head .wfspec{margin:0}
+.wffs-head .wfph button{padding-block:3px}
+.wfcol-ph{display:flex;align-items:center;gap:6px;margin:8px 2px 4px;font-size:11.5px;font-weight:600;color:var(--fg-2)}
+.wfcol-ph .sw{width:8px;height:8px;border-radius:2px;background:var(--c)}
+.wfadd select[name=ph]{max-width:150px}
+.wflay-ctx .wflay-st{margin-left:auto;padding-left:12px;flex:none}
+.wfz-p{color:color-mix(in srgb,var(--c) 75%,var(--fg-2));text-transform:none;letter-spacing:0;font-weight:600}

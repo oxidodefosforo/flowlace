@@ -30,6 +30,15 @@ module.exports = function makeFixture(dir, opts = {}) {
     d.workflow.steps.find(s => s.id === 'el-out1').deps.push('el-ac3');
     d.workflow.steps.forEach((s, i) => { s.order = i; });
   }
+  if (opts.phases) {   // the flow continues in Design Development and Tender Issue (for All phases)
+    d.workflow.steps.push(
+      st('co-dd-in1', 'ph-dd', C, 'input', 'Coordinated architectural model', ['co-ac1'], ['ro-bimc']),
+      st('el-dd-ac1', 'ph-dd', E, 'action', 'Detailed lighting design', ['co-dd-in1', 'el-out1'], ['ro-eng']),
+      st('me-dd-ac1', 'ph-dd', M, 'action', 'Duct and pipe sizing', ['me-out2'], ['ro-eng']),
+      st('el-dd-out1', 'ph-dd', E, 'output', 'Electrical DD report', ['el-dd-ac1'], ['ro-seng']),
+      st('co-dd-out1', 'ph-dd', C, 'output', 'DD coordination report', ['el-dd-out1', 'me-dd-ac1'], ['ro-bimc']),
+      st('co-ti-out1', 'ph-ti', C, 'output', 'Tender documentation', ['co-dd-out1'], ['ro-bimc']));
+  }
   d.workflowDraft = null;
   const f = path.join(dir, 'layout-fixture.json');
   fs.writeFileSync(f, JSON.stringify(src, null, 2));

@@ -9,6 +9,17 @@ function wfStdNodes(ed,ph,specs){
     out.push({id:x.id,cat:x.cat,lane,name:x.name,kind:`${other?'From '+phName(x.phaseId)+' · ':'Reference · '}${wfSpecName(wfSpecOf(x))}`,deps:[],ref:true,cls:'ref'})}));
   return {nodes:out,extL};
 }
+/* All phases: every activity once, in its phase; what it needs outside the specialty filter is drawn in its own phase */
+function wfStdNodesAll(ed,phs,specs){
+  const inPh=new Set(phs),inView=s=>!s.retired&&inPh.has(s.phaseId)&&(!specs||specs.includes(wfSpecOf(s)));
+  const vis=ed.steps.filter(inView),ids=new Set(vis.map(s=>s.id)),out=[],extL=new Set();
+  vis.forEach(s=>{const rl=(s.roleIds||[]).filter(r=>role(r)).map(roleName);out.push({id:s.id,ph:s.phaseId,cat:s.cat,lane:wfSpecOf(s),name:s.name,kind:`${WF_CAT[s.cat]} · ${wfSpecName(wfSpecOf(s))}`,sub:rl.length?'Role: '+rl.join(' or '):'No responsible role',deps:s.deps,cls:s.serviceId?'':'unclassified'})});
+  vis.forEach(s=>s.deps.forEach(d=>{if(ids.has(d))return;const x=wfStep(d,ed);if(!x||x.retired||!inPh.has(x.phaseId))return;ids.add(d);const lane=wfSpecOf(x);extL.add(lane);
+    out.push({id:x.id,ph:x.phaseId,cat:x.cat,lane,name:x.name,kind:`Reference · ${wfSpecName(lane)}`,deps:[],ref:true,cls:'ref'})}));
+  return {nodes:out,extL};
+}
+/* phases in the company's order that have something to show */
+const wfPhOrder=ids=>{const set=new Set(ids);return S.phases.map(g=>g.id).filter(id=>set.has(id))};
 function wfPhaseTabs(cur,list,act,label,pid){return `<div class="wfph" role="tablist" aria-label="${label}">${list.map(([id,extra,lab])=>`<button role="tab" data-act="${act}" data-v="${id}"${pid?` data-pid="${pid}"`:''} aria-selected="${cur===id}">${id==='_all'?'':`<span class="sw" style="--c:${phColor(id)}"></span>`}${esc(lab||phName(id))}${extra||''}</button>`).join('')}</div>`}
 function wfSpecChips(act,cur,list,pid){const all=!cur||!cur.length;
   return `<div class="wfspec" role="group" aria-label="Specialties"><span class="muted">Specialties</span><button class="chip wfsc" data-act="${act}" data-v="_all"${pid?` data-pid="${pid}"`:''} aria-pressed="${all}">All</button>${list.map(id=>`<button class="chip wfsc" data-act="${act}" data-v="${id}"${pid?` data-pid="${pid}"`:''} aria-pressed="${!all&&cur.includes(id)}">${esc(wfSpecName(id))}</button>`).join('')}</div>`}
@@ -18,24 +29,28 @@ function wfToggleSpec(cur,v,list){if(v==='_all')return [];const c=new Set(cur&&c
 function settingsWorkflow(){
   const std=wfStd(),ed=wfEdit(),dirty=wfDirty();
   const phases=S.phases.filter(g=>g.active||ed.steps.some(s=>s.phaseId===g.id&&!s.retired));
-  let ph=prefs.wfSetPhase&&phase(prefs.wfSetPhase)?prefs.wfSetPhase:(phases.find(g=>ed.steps.some(s=>s.phaseId===g.id&&!s.retired))||phases[0]||{}).id;
+  let ph=prefs.wfSetPhase==='_all'||(prefs.wfSetPhase&&phase(prefs.wfSetPhase))?prefs.wfSetPhase:(phases.find(g=>ed.steps.some(s=>s.phaseId===g.id&&!s.retired))||phases[0]||{}).id;
   if(!ph)return '<p class="muted">Add a phase first.</p>';
+  const all=ph==='_all',allPh=wfPhOrder(ed.steps.filter(s=>!s.retired).map(s=>s.phaseId)),viewPh=all?allPh:[ph];
   const specList=wfSpecs(ed),specs=(prefs.wfSetSpecs||[]).filter(x=>specList.includes(x)),flt=specs.length?specs:null;
-  const steps=wfPhaseSteps(ed,ph),retired=wfPhaseSteps(ed,ph,true),unc=ed.steps.filter(s=>!s.retired&&!s.serviceId).length;
+  const retired=viewPh.flatMap(x=>wfPhaseSteps(ed,x,true)),unc=ed.steps.filter(s=>!s.retired&&!s.serviceId).length;
   let h=`<div class="wfhead"><div><h2 style="margin:0">Company workflow ${std.demo?'<span class="chip c-w" title="Example steps to try the tool. Not Alphazeta’s real procedure.">Demo</span>':''}</h2>
     <p class="note" style="margin:4px 0 0">The global standard, by phase and specialty. Projects <b>import</b> the activities they need (Workflow tab → Import activities) and execute them; nothing is created automatically. Its structure is edited only here.</p></div>
     <div class="wfapply"><span class="muted">${std.version?`Published: v${std.version}${std.appliedAt?' · '+fmt(std.appliedAt.slice(0,10)):''}`:'Not published yet'}</span>${dirty?'<span class="chip c-w">Unsaved changes</span><button class="btn sm ghost" data-act="wf-discard">Discard</button>':''}<button class="btn sm primary" data-act="wf-save" title="Publish the standard. Projects are not changed: they review and import what they need.">Save and publish</button></div></div>`;
   if(unc)h+=`<div class="pn-warn" role="status" style="margin-bottom:8px"><span><b>${plural(unc,'step')} to classify.</b> Steps from the first version have no specialty. Choose one in each step (▾ → Specialty); projects keep their tasks.</span></div>`;
-  h+=wfPhaseTabs(ph,phases.map(g=>[g.id,`<span class="cnt">${ed.steps.filter(s=>s.phaseId===g.id&&!s.retired).length}</span>`]),'wf-sphase','Phase');
-  h+=wfSpecChips('wf-sspec',specs,specList.filter(id=>ed.steps.some(s=>s.phaseId===ph&&!s.retired&&wfSpecOf(s)===id)||id!=='_none'));
+  const head=wfPhaseTabs(ph,[['_all',`<span class="cnt">${ed.steps.filter(s=>!s.retired&&allPh.includes(s.phaseId)).length}</span>`,'All phases'],...phases.map(g=>[g.id,`<span class="cnt">${ed.steps.filter(s=>s.phaseId===g.id&&!s.retired).length}</span>`])],'wf-sphase','Phase')
+    +wfSpecChips('wf-sspec',specs,specList.filter(id=>ed.steps.some(s=>viewPh.includes(s.phaseId)&&!s.retired&&wfSpecOf(s)===id)||id!=='_none'));
+  h+=head;
   if(ui.wfSel&&!wfStep(ui.wfSel,ed))ui.wfSel=null;
-  const g=wfStdNodes(ed,ph,flt);
-  h+=wfDiagram(g.nodes,{mode:'std',std:ed,extLanes:g.extL,ctx:{scope:'std',key:ph},empty:'No steps for this phase and specialty yet. Add inputs, actions and outputs in the matrix below.'});
+  const g=all?wfStdNodesAll(ed,allPh,flt):wfStdNodes(ed,ph,flt);
+  h+=wfDiagram(g.nodes,{mode:'std',std:ed,extLanes:g.extL,phases:all?wfPhOrder(g.nodes.map(n=>n.ph)):null,fsHead:head,ctx:{scope:'std',key:all?'_global':ph},empty:all?'No steps in the Company workflow yet.':'No steps for this phase and specialty yet. Add inputs, actions and outputs in the matrix below.'});
   h+=`<p class="hint" style="margin:4px 0 10px">Arrows come from “Depends on”, also between specialties and phases. Requirements outside the selected specialties or phase are drawn as dashed reference nodes. Columns are independent lists: the same row is not a connection.</p>`;
   const addSpec=flt&&flt.length===1?flt[0]:'';
-  h+=`<div class="wfm">${WF_COLS.map(([cat,lab])=>{const col=wfColSteps(ed,ph,cat,flt);return `<section class="wfcol c-${cat}" aria-label="${lab}"><h3>${lab} <span class="muted">${col.length}</span></h3>
-    ${col.map((s,i)=>wfStdCard(s,ed,i,col.length,col)).join('')}
-    <form class="wfadd" data-form="wf-add" data-cat="${cat}" data-ph="${ph}"><input class="in" name="name" id="wf-add-${cat}" placeholder="+ Add ${WF_CAT[cat].toLowerCase()}: name, then Enter" maxlength="160" autocomplete="off" aria-label="New ${WF_CAT[cat].toLowerCase()} name"><select class="in" name="spec" id="wf-add-${cat}-sp" aria-label="Specialty of the new ${WF_CAT[cat].toLowerCase()}">${wfSpecs(ed).filter(x=>x!=='_none').map(id=>`<option value="${id}"${id===addSpec?' selected':''}>${esc(wfSpecName(id))}</option>`).join('')}</select></form></section>`}).join('')}</div>`;
+  /* All phases: the cards of each column grouped by phase (↑ ↓ order inside the phase); a new step asks for its phase */
+  const addPh=all?(phases.find(g=>g.active)||phases[0]||{}).id:ph;
+  h+=`<div class="wfm">${WF_COLS.map(([cat,lab])=>{const groups=viewPh.map(x=>[x,wfColSteps(ed,x,cat,flt)]),n=groups.reduce((a,[,c])=>a+c.length,0);return `<section class="wfcol c-${cat}" aria-label="${lab}"><h3>${lab} <span class="muted">${n}</span></h3>
+    ${groups.map(([x,col])=>(all&&col.length?`<div class="wfcol-ph"><span class="sw" style="--c:${phColor(x)}"></span>${esc(phName(x))}</div>`:'')+col.map((s,i)=>wfStdCard(s,ed,i,col.length,col)).join('')).join('')}
+    <form class="wfadd" data-form="wf-add" data-cat="${cat}" data-ph="${all?'':ph}">${all?`<select class="in" name="ph" id="wf-add-${cat}-ph" aria-label="Phase of the new ${WF_CAT[cat].toLowerCase()}">${phases.map(g=>`<option value="${g.id}"${g.id===addPh?' selected':''}>${esc(g.name)}</option>`).join('')}</select>`:''}<input class="in" name="name" id="wf-add-${cat}" placeholder="+ Add ${WF_CAT[cat].toLowerCase()}: name, then Enter" maxlength="160" autocomplete="off" aria-label="New ${WF_CAT[cat].toLowerCase()} name"><select class="in" name="spec" id="wf-add-${cat}-sp" aria-label="Specialty of the new ${WF_CAT[cat].toLowerCase()}">${wfSpecs(ed).filter(x=>x!=='_none').map(id=>`<option value="${id}"${id===addSpec?' selected':''}>${esc(wfSpecName(id))}</option>`).join('')}</select></form></section>`}).join('')}</div>`;
   if(retired.length)h+=`<details class="wfret"><summary>Retired steps (${retired.length}) · kept as history in projects</summary>${retired.map(s=>`<div class="wfret-r"><span class="chip">${WF_CAT[s.cat]}</span> ${esc(s.name)} <span class="muted">${esc(wfSpecName(wfSpecOf(s)))}</span> <button class="btn sm ghost" data-act="wf-restore" data-id="${s.id}">Restore</button></div>`).join('')}</details>`;
   return h;
 }
@@ -74,7 +89,7 @@ function wfProjNodes(p,ph,specs){
   const intV=tasks.filter(t=>wfIsInt(t)&&inPh(wfStep(t.wfStepId))&&inSp(wfStep(t.wfStepId)));
   const out=[],ids=new Set(),extL=new Set(),who=t=>t.assignedToId?shortName(pname(t.assignedToId)):'Unassigned';
   const node=(s,t,ref)=>{const a=t?wfAvail(t):null,ext=t&&!wfIsInt(t);
-    return {id:s.id,tid:t&&t.id,cat:ext?'input':s.cat,lane:wfSpecOf(s),name:s.name,deps:ext||ref?[]:s.deps,
+    return {id:s.id,ph:s.phaseId,tid:t&&t.id,cat:ext?'input':s.cat,lane:wfSpecOf(s),name:s.name,deps:ext||ref?[]:s.deps,
       kind:ext?`External input · ${wfSpecName(wfSpecOf(s))}`:`${WF_CAT[s.cat]} · ${a?a.k==='done'?'✓ Done':a.k==='doing'?t.status:a.k==='ready'?'Available':'Waiting':''}`,
       sub:ext?`${t.wfConsultant||'Consultant not set'} · ${t.status==='Done'?'✓ received':'follow-up '+who(t)}`:`${who(t)}${t.due?' · '+fmt(t.due):''}`,
       cls:`${ext?'ext':''} ${a?'a-'+a.k:''} ${ref?'ref':''}`.trim(),title:s.name+(ext?' — information from '+wfSpecName(wfSpecOf(s)):'')}};
@@ -82,7 +97,7 @@ function wfProjNodes(p,ph,specs){
   /* everything those activities need is drawn, also when it is outside the filter: the filter never hides a constraint */
   intV.forEach(t=>wfStep(t.wfStepId).deps.forEach(d=>{if(ids.has(d))return;const ds=wfStep(d);if(!ds||ds.retired)return;ids.add(d);const st=wfDepState(p.id,ds),other=ph!=='_all'&&ds.phaseId!==ph;
     if(st.t){const n=node(ds,st.t,!wfIsInt(st.t)?false:true);if(other){n.lane='_ref';n.kind=`From ${phName(ds.phaseId)} · `+n.kind}if(wfIsInt(st.t))n.cls+=' ref';out.push(n)}
-    else out.push({id:ds.id,cat:ds.cat,lane:other?'_ref':wfSpecOf(ds),name:ds.name,deps:[],kind:st.kind==='notImported'?'Internal · not imported':st.kind==='unresolved'?'Source to resolve':'External · not set up',sub:`${wfSpecName(wfSpecOf(ds))}${ds.phaseId!==ph?' · '+phName(ds.phaseId):''}`,cls:'ref '+(st.kind==='notImported'?'notimp':st.kind==='unresolved'?'unres':'extmiss')});
+    else out.push({id:ds.id,ph:ds.phaseId,cat:ds.cat,lane:other?'_ref':wfSpecOf(ds),name:ds.name,deps:[],kind:st.kind==='notImported'?'Internal · not imported':st.kind==='unresolved'?'Source to resolve':'External · not set up',sub:`${wfSpecName(wfSpecOf(ds))}${ds.phaseId!==ph?' · '+phName(ds.phaseId):''}`,cls:'ref '+(st.kind==='notImported'?'notimp':st.kind==='unresolved'?'unres':'extmiss')});
     if(!other&&!(specs||[]).includes(wfSpecOf(ds))&&specs)extL.add(wfSpecOf(ds))}));
   return {nodes:out,extL,intV};
 }
@@ -111,7 +126,8 @@ function projectWorkflow(p){
   h+=`<div class="wfstats"><span><b>Internal activities</b> ${dn}/${intT.length} completed ${wfBar(dn,intT.length)}</span><span><b>External inputs</b> ${xs.length-xpend}/${xs.length} received${xpend?` · <span class="warnt">${xpend} pending</span>`:''}</span><span class="muted">External consultants’ design is not counted as our production.</span></div>`;
   h+=`<div class="wflegend" aria-label="Legend"><span class="wfa wfa-done">✓ Completed</span><span class="wfa wfa-doing">◐ In progress</span><span class="wfa wfa-ready">▶ Available</span><span class="wfa wfa-blocked">⏸ Waiting for requirements</span><span class="wfa wfa-awaiting">⇢ External input</span><span class="wfa wfa-notimp">○ Internal requirement not imported</span><span class="muted">Requirements warn; they never block editing or change a status.</span></div>`;
   h+=wfRoleMapHTML(p);
-  h+=wfDiagram(G.nodes,{mode:'proj',extLanes:G.extL,ctx:{scope:'proj',pid:p.id,key:ph},empty:'No imported activities for this selection.'});
+  const fsHead=`<div class="wfph" role="tablist" aria-label="Phase"><button role="tab" data-act="wf-pphase" data-pid="${p.id}" data-v="_all" aria-selected="${ph==='_all'}">All phases</button>${phs.map(id=>`<button role="tab" data-act="wf-pphase" data-pid="${p.id}" data-v="${id}" aria-selected="${ph===id}"${sc[id]?'':' class="notimp"'}><span class="sw" style="--c:${phColor(id)}"></span>${esc(phName(id))}</button>`).join('')}</div>${wfSpecChips('wf-pspec',specs,specList.filter(x=>x!=='_none'||wfStd().steps.some(s=>!s.retired&&!s.serviceId)),p.id)}`;
+  h+=wfDiagram(G.nodes,{mode:'proj',extLanes:G.extL,phases:ph==='_all'?wfPhOrder(G.nodes.map(n=>n.ph)):null,fsHead,ctx:{scope:'proj',pid:p.id,key:ph==='_all'?'_global':ph},empty:'No imported activities for this selection.'});
   const shown=[...intT,...xs];
   h+=`<div class="wfm">${WF_COLS.map(([cat,lab])=>{const col=shown.filter(t=>wfIsInt(t)?wfStep(t.wfStepId).cat===cat:cat==='input').sort((a,b)=>(wfIsInt(a)?0:1)-(wfIsInt(b)?0:1)||wfSpecs().indexOf(wfSpecOf(wfStep(a.wfStepId)))-wfSpecs().indexOf(wfSpecOf(wfStep(b.wfStepId)))||wfStep(a.wfStepId).order-wfStep(b.wfStepId).order);
     return `<section class="wfcol c-${cat}" aria-label="${lab}"><h3>${lab} <span class="muted">${col.filter(t=>t.status==='Done').length}/${col.length}</span></h3>${col.map(t=>wfExecCard(t,p)).join('')||'<p class="muted" style="margin:6px 2px">None</p>'}</section>`}).join('')}</div>`;
