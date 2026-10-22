@@ -7,10 +7,10 @@ document.addEventListener('change',e=>{const el=e.target;if(!el.dataset)return;
       /* the floating editor and the matrix card show the same activity: keep both in step without re-rendering (focus and scroll stay) */
       const card=document.getElementById('wfc-'+s.id),cd=card&&card.querySelector('.wfc-desc');if(cd){if(s.desc)cd.textContent=s.desc;else cd.remove()}else if(card&&s.desc&&!card.classList.contains('open')){const h=card.querySelector('.wfc-h');h&&h.insertAdjacentHTML('afterend',`<div class="wfc-desc">${esc(s.desc)}</div>`)}
       document.querySelectorAll(`[data-wfs="${CSS.escape(s.id)}"][data-f=desc]`).forEach(x=>{if(x!==el)x.value=s.desc});return}
-    if(f==='serviceId'){if(!service(el.value))return;wfMutate(()=>{s.serviceId=el.value});const c=document.getElementById(`wfs-${s.id}-s`);c&&c.focus({preventScroll:true});return}
+    if(f==='serviceId'){if(!service(el.value))return;wfMutate(d=>{s.serviceId=el.value;wfForget(d,s.id,true);wfPlaceInViews(d,s)});const c=document.getElementById(`wfs-${s.id}-s`);c&&c.focus({preventScroll:true});return}
     if(f==='cat'){wfMutate(d=>{const col=wfColSteps(d,s.phaseId,el.value);s.cat=el.value;s.order=col.length?Math.max(...col.map(x=>x.order))+1:0;
       /* a new category means a new zone: its manual place (if any) is recalculated there */
-      if(d.layout&&d.layout[s.phaseId]&&d.layout[s.phaseId].n){delete d.layout[s.phaseId].n[s.id];wfInsertInLayout(d,s)}});return}}
+      wfForget(d,s.id,true);wfPlaceInViews(d,s)});return}}
   if(el.dataset.wfdep){const dr=wfDraft(),s=wfStep(el.dataset.wfdep,dr),dep=el.value;if(!s)return;
     if(el.checked){const why=wfLinkProblem(dr,dep,s.id);if(why){el.checked=false;toast(why,'err');return}wfHistDeps(s.phaseId);wfMutate(d=>{s.deps.push(dep);wfFixOrder(d,s.phaseId)})}
     else{wfHistDeps(s.phaseId);wfMutate(()=>{s.deps=s.deps.filter(x=>x!==dep)})}
@@ -38,7 +38,7 @@ function wfSelect(id){ui.wfSel=id;
 function wfAct(act,a){
   const id=a.dataset.id;
   switch(act){
-    case 'wf-sphase':prefs.wfSetPhase=a.dataset.v;ui.wfSel=null;savePrefs();render();return true;
+    case 'wf-sphase':prefs.wfSetPhase=a.dataset.v;ui.wfSel=null;ui.wfLocate=null;savePrefs();render();return true;
     case 'wf-sspec':prefs.wfSetSpecs=wfToggleSpec(prefs.wfSetSpecs,a.dataset.v,wfSpecs());savePrefs();render();{const b=document.querySelector(`[data-act=wf-sspec][data-v="${a.dataset.v}"]`);b&&b.focus({preventScroll:true})}return true;
     case 'wf-pphase':prefs.wfPhase={...(prefs.wfPhase||{}),[a.dataset.pid]:a.dataset.v};ui.wfSel=null;savePrefs();render();return true;
     case 'wf-pspec':prefs.wfSpecs={...(prefs.wfSpecs||{}),[a.dataset.pid]:wfToggleSpec((prefs.wfSpecs||{})[a.dataset.pid],a.dataset.v,wfSpecs())};savePrefs();render();{const b=document.querySelector(`[data-act=wf-pspec][data-v="${a.dataset.v}"]`);b&&b.focus({preventScroll:true})}return true;

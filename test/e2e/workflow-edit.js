@@ -143,7 +143,7 @@ module.exports = async function run() {
     assert.strictEqual(await sepX(), s);
   });
 
-  await step('2/3 · new Output (no dependencies) in the Outputs zone; new Input and Action at the start of their zones', async () => {
+  await step('2/3 · new Output (no dependencies) in the Outputs zone; new Input and Action in their zones', async () => {
     const P0 = await allPos(), cs = await cats();
     const firstOf = c => Math.min(...Object.keys(P0).filter(id => cs[id] === c && !id.startsWith('fee')).map(id => P0[id].x));
     const add = async (cat, name, spec) => { await w.selectOption(`#wf-add-${cat}-sp`, spec); await w.fill(`#wf-add-${cat}`, name); await w.press(`#wf-add-${cat}`, 'Enter'); await H.sleep(300);

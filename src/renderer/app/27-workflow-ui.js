@@ -43,7 +43,7 @@ function settingsWorkflow(){
   h+=head;
   if(ui.wfSel&&!wfStep(ui.wfSel,ed))ui.wfSel=null;
   const g=all?wfStdNodesAll(ed,allPh,flt):wfStdNodes(ed,ph,flt);
-  h+=wfDiagram(g.nodes,{mode:'std',std:ed,extLanes:g.extL,phases:all?wfPhOrder(g.nodes.map(n=>n.ph)):null,fsHead:head,ctx:{scope:'std',key:all?'_global':ph},empty:all?'No steps in the Company workflow yet.':'No steps for this phase and specialty yet. Add inputs, actions and outputs in the matrix below.'});
+  h+=wfDiagram(g.nodes,{mode:'std',std:ed,extLanes:g.extL,phases:all?wfPhOrder(g.nodes.map(n=>n.ph)):null,fsHead:head,ctx:{scope:'std',key:wfViewKey(all?'_global':ph,flt)},empty:all?'No steps in the Company workflow yet.':'No steps for this phase and specialty yet. Add inputs, actions and outputs in the matrix below.'});
   h+=`<p class="hint" style="margin:4px 0 10px">Arrows come from “Depends on”, also between specialties and phases. Requirements outside the selected specialties or phase are drawn as dashed reference nodes. Columns are independent lists: the same row is not a connection.</p>`;
   const addSpec=flt&&flt.length===1?flt[0]:'';
   /* All phases: the cards of each column grouped by phase (↑ ↓ order inside the phase); a new step asks for its phase */
@@ -72,14 +72,21 @@ function wfStepFields(s,ed,pf){const used=wfStd().steps.some(x=>x.id===s.id);
       ${wfDepPicker(s,ed)}
       <div class="row"><span class="muted" style="font-size:11.5px">Step id: ${esc(s.id)}</span><span class="spacer"></span><button class="btn sm ghost danger-t" data-act="wf-retire" data-id="${s.id}">${used?'Retire step…':'Remove step'}</button></div>`}
 function wfMutate(fn){const dr=wfDraft();fn(dr);save(true);setSaveInd();wfRerender()}   // the view keeps its scroll
-function wfAddStep(cat,ph,name,spec){wfMutate(dr=>{const col=wfColSteps(dr,ph,cat),st={id:uid('ws'),phaseId:ph,serviceId:service(spec)?spec:null,cat,name,desc:'',deps:[],order:0,retired:false,createdAt:new Date().toISOString(),roleIds:[]};
-  /* in the diagram a new activity goes at the start of its zone (cards of new activities start collapsed) */
-  st.order=col.length?Math.max(...col.map(x=>x.order))+1:0;dr.steps.push(st);wfInsertInLayout(dr,st)})}
+function wfAddStep(cat,ph,name,spec){
+  /* one new activity in the data; in each saved view that shows it only its block is placed, in a free slot (near the
+     visible area of the current view); nothing else moves and Auto layout is not run */
+  const hint=wfViewHint(),cx=wfCurCtx();let id=null;
+  wfMutate(dr=>{const col=wfColSteps(dr,ph,cat),st={id:uid('ws'),phaseId:ph,serviceId:service(spec)?spec:null,cat,name,desc:'',deps:[],order:0,retired:false,createdAt:new Date().toISOString(),roleIds:[]};id=st.id;
+    if(cx&&cx.scope==='std'&&cx.derived&&cx.own){dr.layout={...(dr.layout||{}),[cx.key]:wfClone(cx.own)}}   // the filtered view being looked at keeps what it shows
+    st.order=col.length?Math.max(...col.map(x=>x.order))+1:0;dr.steps.push(st);wfInsertInLayout(dr,st,hint)});
+  /* placed outside what is visible: offer to locate it (the view itself does not jump) */
+  if(id&&document.getElementById('wfn-'+id)&&!wfInView(id)){ui.wfLocate=id;wfRerender()}
+}
 async function wfRetire(id){
   const dr=wfDraft(),s=wfStep(id,dr);if(!s)return;const used=wfStd().steps.some(x=>x.id===id);
   const ts=S.tasks.filter(t=>t.wfStepId===id),done=ts.filter(t=>t.status==='Done').length,dependents=dr.steps.filter(x=>x.deps.includes(id));
   if(used&&!await confirmBox('Retire step?',`“${esc(s.name)}” leaves the active standard when you publish. ${ts.length?`Its ${plural(ts.length,'project task')} (${done} done) are kept as history, with their assignees, dates and notes.`:''}${dependents.length?` ${plural(dependents.length,'step')} that depend on it lose that link.`:''}`,'Retire'))return;
-  wfMutate(d=>{if(used){wfStep(id,d).retired=true}else d.steps=d.steps.filter(x=>x.id!==id);d.steps.forEach(x=>{x.deps=x.deps.filter(z=>z!==id)})});
+  wfMutate(d=>{if(used){wfStep(id,d).retired=true}else d.steps=d.steps.filter(x=>x.id!==id);d.steps.forEach(x=>{x.deps=x.deps.filter(z=>z!==id)});wfForget(d,id)});
   if(ui.wfSel===id)ui.wfSel=null;toast(used?`“${s.name}” will be retired when you publish`:`“${s.name}” removed`);
 }
 
@@ -127,7 +134,7 @@ function projectWorkflow(p){
   h+=`<div class="wflegend" aria-label="Legend"><span class="wfa wfa-done">✓ Completed</span><span class="wfa wfa-doing">◐ In progress</span><span class="wfa wfa-ready">▶ Available</span><span class="wfa wfa-blocked">⏸ Waiting for requirements</span><span class="wfa wfa-awaiting">⇢ External input</span><span class="wfa wfa-notimp">○ Internal requirement not imported</span><span class="muted">Requirements warn; they never block editing or change a status.</span></div>`;
   h+=wfRoleMapHTML(p);
   const fsHead=`<div class="wfph" role="tablist" aria-label="Phase"><button role="tab" data-act="wf-pphase" data-pid="${p.id}" data-v="_all" aria-selected="${ph==='_all'}">All phases</button>${phs.map(id=>`<button role="tab" data-act="wf-pphase" data-pid="${p.id}" data-v="${id}" aria-selected="${ph===id}"${sc[id]?'':' class="notimp"'}><span class="sw" style="--c:${phColor(id)}"></span>${esc(phName(id))}</button>`).join('')}</div>${wfSpecChips('wf-pspec',specs,specList.filter(x=>x!=='_none'||wfStd().steps.some(s=>!s.retired&&!s.serviceId)),p.id)}`;
-  h+=wfDiagram(G.nodes,{mode:'proj',extLanes:G.extL,phases:ph==='_all'?wfPhOrder(G.nodes.map(n=>n.ph)):null,fsHead,ctx:{scope:'proj',pid:p.id,key:ph==='_all'?'_global':ph},empty:'No imported activities for this selection.'});
+  h+=wfDiagram(G.nodes,{mode:'proj',extLanes:G.extL,phases:ph==='_all'?wfPhOrder(G.nodes.map(n=>n.ph)):null,fsHead,ctx:{scope:'proj',pid:p.id,key:wfViewKey(ph==='_all'?'_global':ph,flt)},empty:'No imported activities for this selection.'});
   const shown=[...intT,...xs];
   h+=`<div class="wfm">${WF_COLS.map(([cat,lab])=>{const col=shown.filter(t=>wfIsInt(t)?wfStep(t.wfStepId).cat===cat:cat==='input').sort((a,b)=>(wfIsInt(a)?0:1)-(wfIsInt(b)?0:1)||wfSpecs().indexOf(wfSpecOf(wfStep(a.wfStepId)))-wfSpecs().indexOf(wfSpecOf(wfStep(b.wfStepId)))||wfStep(a.wfStepId).order-wfStep(b.wfStepId).order);
     return `<section class="wfcol c-${cat}" aria-label="${lab}"><h3>${lab} <span class="muted">${col.filter(t=>t.status==='Done').length}/${col.length}</span></h3>${col.map(t=>wfExecCard(t,p)).join('')||'<p class="muted" style="margin:6px 2px">None</p>'}</section>`}).join('')}</div>`;

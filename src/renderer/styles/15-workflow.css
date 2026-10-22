@@ -276,3 +276,5 @@ body:has(.wfdia.fs) #main{overflow:hidden}
 .wfadd select[name=ph]{max-width:150px}
 .wflay-ctx .wflay-st{margin-left:auto;padding-left:12px;flex:none}
 .wfz-p{color:color-mix(in srgb,var(--c) 75%,var(--fg-2));text-transform:none;letter-spacing:0;font-weight:600}
+.wfn.flash{animation:wfflash 1.4s ease-out 1}
+@keyframes wfflash{0%,40%{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 55%,transparent)}100%{box-shadow:none}}

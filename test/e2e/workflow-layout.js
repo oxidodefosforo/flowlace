@@ -165,17 +165,17 @@ module.exports = async function run() {
     stdPos = b2;
   });
 
-  await step('4 · filtering specialties keeps the positions of the hidden blocks', async () => {
-    const elLane0 = await lane('sv-hydraulics'), hy0 = await box('hy-ac1');
+  await step('4 · a filtered view starts from the arranged one without the space of the hidden blocks; it never changes it', async () => {
+    const elLane0 = await lane('sv-hydraulics'), hy0 = await box('hy-ac1'), ho0 = await box('hy-out1');
     await w.click('[data-act=wf-sspec][data-v=sv-hydraulics]'); await H.sleep(250);
-    const elLane1 = await lane('sv-hydraulics'), hy1 = await box('hy-ac1');
-    assert.strictEqual(hy1.x, hy0.x); assert.strictEqual(hy1.y - elLane1.y, hy0.y - elLane0.y, 'same place inside its lane');
+    const elLane1 = await lane('sv-hydraulics'), hy1 = await box('hy-ac1'), ho1 = await box('hy-out1');
+    assert.ok(hy1.x <= hy0.x && ho1.x - hy1.x <= ho0.x - hy0.x && ho1.x > hy1.x, 'same order, empty space removed'); assert.strictEqual(hy1.y - elLane1.y, hy0.y - elLane0.y, 'same place inside its lane');
     assert.strictEqual(await box('me-ac2'), null, 'Mechanical hidden');
     await drag('hy-out1', 30, 0);                       // arranging while filtered…
     await w.click('[data-act=wf-sspec][data-v=_all]'); await H.sleep(250);
     const b = await all(IDS);
-    for (const id of IDS.filter(i => !i.startsWith('hy'))) assert.deepStrictEqual(b[id], stdPos[id], id + ' unchanged by the filter');
-    await w.click('[data-wflay=undo]'); await H.sleep(200);
+    for (const id of IDS) assert.deepStrictEqual(b[id], stdPos[id], id + ' unchanged by the filtered view');
+    assert.ok(rec(records(dbFile), 'workflowDraft').layout['ph-sd~sv-hydraulics'], 'the filtered view keeps its own layout');
     await w.click('[data-act=wf-save]'); await H.saved(w);
   });
 

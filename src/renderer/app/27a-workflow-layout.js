@@ -44,14 +44,23 @@ function wfLayNorm(v){
     const x={},s=wfSegsNorm(p.s),a=wfAnchorNorm(p.a),b=wfAnchorNorm(p.b);if(s)x.s=s;if(a)x.a=a;if(b)x.b=b;if(s&&Array.isArray(p.f)&&p.f.length===4&&p.f.every(v=>typeof v==='number'&&isFinite(v)))x.f=p.f.map(Math.round);if(Object.keys(x).length)o.e[k]=x});
   return o.auto||o.z||o.zg||Object.keys(o.n).length||Object.keys(o.l).length||Object.keys(o.e).length?o:null;
 }
-function wfLayoutsNorm(x){const o={};if(!x||typeof x!=='object')return o;Object.entries(x).forEach(([k,v])=>{if(k.length<=80){const n=wfLayNorm(v);if(n)o[k]=n}});return o}
+function wfLayoutsNorm(x){const o={};if(!x||typeof x!=='object')return o;Object.entries(x).forEach(([k,v])=>{if(k.length<=600&&!/[<>"]/.test(k)){const n=wfLayNorm(v);if(n)o[k]=n}});return o}
+/* ----- one layout per view: phase (or _global for All phases) + the selected specialties, in a fixed order -----
+   "ph-sd" = all specialties; "ph-sd~sv-electrical+sv-hydraulics" = Electrical + Hydraulics, whatever the click order */
+const wfViewKey=(base,specs)=>specs&&specs.length?base+'~'+[...new Set(specs)].sort().join('+'):base;
+const wfKeyBase=k=>String(k).split('~')[0];
+const wfKeySpecs=k=>{k=String(k);const i=k.indexOf('~');return i<0?null:k.slice(i+1).split('+').filter(Boolean)};
 
 /* ----- which layout a diagram uses, and who may change it ----- */
 const wfCanEditStd=()=>typeof SY==='undefined'||SY.isAdmin!==false;
 function wfLayCtx(c){
   if(!c)return null;
-  if(c.scope==='std'){const ed=wfEdit();return {...c,base:null,own:(ed.layout||{})[c.key]||null,canEdit:wfCanEditStd(),canLink:wfCanEditStd(),pub:(wfStd().layout||{})[c.key]||null}}
-  const p=project(c.pid);return {...c,base:(wfStd().layout||{})[c.key]||null,own:((p&&p.wfLayout)||{})[c.key]||null,canEdit:!!p,canLink:false};
+  /* a filtered view never saved yet starts from the visible part of the all-specialties view (see wfDeriveFor) */
+  const dv=k=>{const d=ui.wfDerived&&ui.wfDerived[k];return d?d.lay:null};
+  if(c.scope==='std'){const ed=wfEdit(),own=(ed.layout||{})[c.key]||null,id='std::'+c.key;
+    return {...c,base:null,own:own||dv(id),derived:!own&&!!dv(id),canEdit:wfCanEditStd(),canLink:wfCanEditStd(),pub:(wfStd().layout||{})[c.key]||null}}
+  const p=project(c.pid),own=((p&&p.wfLayout)||{})[c.key]||null,base=(wfStd().layout||{})[c.key]||null,id='proj:'+c.pid+':'+c.key;
+  return {...c,base,own:own||(base?null:dv(id)),derived:!own&&!base&&!!dv(id),canEdit:!!p,canLink:false};
 }
 const wfCtxId=cx=>cx.scope+':'+(cx.pid||'')+':'+cx.key;
 function wfLayEff(cx){
@@ -78,7 +87,10 @@ function wfGeom(nodes,o,lay){
   nodes.forEach(n=>{const m=lay.n[n.id];if(m){const r={x:Math.max(X0,m.x),dy:Math.max(TOP,m.dy),manual:true};rel.set(n.id,r);placed.get(n.lane).push(r)}});
   const auto=nodes.filter(n=>!rel.has(n.id)).map((n,i)=>({n,i})).sort((a,b)=>Z.get(a.n.id)-Z.get(b.n.id)||sub.get(a.n.id)-sub.get(b.n.id)||lanes.indexOf(a.n.lane)-lanes.indexOf(b.n.lane)||a.i-b.i).map(x=>x.n);
   const zoneStart=z=>{let s=z===0?X0:Math.max(X0,(lay.z&&lay.z[z])||0);nodes.forEach(n=>{const zn=Z.get(n.id);if(zn<z&&rel.has(n.id))s=Math.max(s,rel.get(n.id).x+W+wfZGap(lay,z,zn))});return s};
-  auto.forEach(n=>{const z=Z.get(n.id);let x=zoneStart(z);
+  /* an arranged view (blocks placed by the user): an activity without a place gets a FREE SLOT in its lane and zone;
+     nothing else moves. Only a view without any arrangement is laid out automatically (as Auto layout does). */
+  if(rel.size)auto.forEach(n=>{const p=wfSlot(n,{nodes,Z,rel,placed,lay,deps,conflict,zoneStart,hit});rel.set(n.id,p);placed.get(n.lane).push(p)});
+  else auto.forEach(n=>{const z=Z.get(n.id);let x=zoneStart(z);
     deps(n).forEach(d=>{if(!conflict(d,n.id)&&rel.has(d))x=Math.max(x,rel.get(d).x+W+GX)});
     const ys=deps(n).filter(d=>rel.has(d)&&by.get(d).lane===n.lane).map(d=>rel.get(d).dy),p={x,dy:ys.length?Math.max(TOP,Math.round(ys.reduce((a,c)=>a+c,0)/ys.length)):TOP};
     let g=0;const pl=placed.get(n.lane);while(pl.some(q=>hit(p,q))&&g++<200)p.dy+=H+GY;if(p.dy!==TOP&&!ys.length){p.dy=TOP;g=0;while(pl.some(q=>hit(p,q))&&g++<200)p.dy+=H+GY}
@@ -117,6 +129,32 @@ function wfGeom(nodes,o,lay){
   /* the drawing's real extent: blocks, arrows and their bends (a bend dragged below the last lane is not cut) */
   const wd=Math.max(X0+W+P,...rects.map(r=>r.x+W),...edges.flatMap(e=>e.pts.map(p=>p[0])))+WFL.PAD,ht=Math.max(y-GY+P,...edges.flatMap(e=>e.pts.map(p=>p[1]+P+8)));
   return {pos,bands,bandOf,edges,wd:Math.round(wd),ht:Math.round(ht),by,Z,zr,zb,sep,nz,phases:o.phases||null,conflicts:edges.filter(e=>e.conflict)};
+}
+function wfSlot(n,c){
+  const {W,H,GX,GY,GAP,TOP,BOT,LW,P}=WFL,{nodes,Z,rel,placed,lay,deps,conflict,zoneStart,hit}=c,z=Z.get(n.id),pl=placed.get(n.lane);
+  /* where it may go: after the earlier zones and what it needs; before the later zones and what needs it */
+  let lo=zoneStart(z),hi=Infinity;
+  deps(n).forEach(d=>{if(!conflict(d,n.id)&&rel.has(d))lo=Math.max(lo,rel.get(d).x+W+GAP)});
+  nodes.forEach(m=>{const q=rel.get(m.id);if(!q||m.id===n.id)return;const zm=Z.get(m.id);
+    if(zm>z)hi=Math.min(hi,q.x-wfZGap(lay,zm,z)-W);
+    if((m.deps||[]).includes(n.id)&&zm>=z)hi=Math.min(hi,q.x-W-GAP)});
+  const laneH=Math.max(H+BOT,(lay.l[n.lane]&&lay.l[n.lane].h)||0,...pl.map(q=>q.dy+H+BOT));
+  const xs=new Set([lo]),ys=new Set([TOP]);
+  rel.forEach((q,id)=>{if(Z.get(id)===z){xs.add(q.x);xs.add(q.x+W+GX)}});
+  pl.forEach(q=>{ys.add(q.dy);ys.add(q.dy+H+GY)});
+  const hint=lay.hint&&lay.hint.id===n.id?lay.hint:null,ref=deps(n).filter(d=>rel.has(d)&&c.nodes.find(m=>m.id===d&&m.lane===n.lane)).map(d=>rel.get(d).dy);
+  const prefDy=ref.length?ref.reduce((a,b)=>a+b,0)/ref.length:TOP;
+  let best=null;
+  for(const x0 of xs)for(const dy of ys){const x=Math.round(x0);if(x<LW+P)continue;
+    const inZone=x>=lo-0.5&&(x<=hi+0.5||hi<lo);if(!inZone)continue;if(hi<lo&&x!==Math.round(lo))continue;
+    const p={x,dy:Math.round(dy)};if(pl.some(q=>hit(p,q)))continue;
+    /* no growth of the lane = no other block moves on screen; otherwise the smallest growth */
+    const grow=Math.max(0,p.dy+H+BOT-laneH);let sc=(grow?100000+grow*10:0)+(x-lo)+Math.abs(p.dy-prefDy)*0.6;
+    if(hint){const by=hint.bandY&&hint.bandY[n.lane],ay=by!=null?by+p.dy:null,vis=x>=hint.x0&&x+W<=hint.x1&&(ay==null||(ay>=hint.y0&&ay+H<=hint.y1));if(!vis)sc+=20000}
+    if(!best||sc<best.sc)best={sc,p}}
+  if(best)return best.p;
+  /* nothing free in the candidates: below the lowest block of its lane */
+  return {x:Math.round(Math.max(lo,LW+P)),dy:Math.max(TOP,...pl.map(q=>q.dy+H+GY))};
 }
 function wfCrosses(pts,rects,skip){const {W,H}=WFL;for(let j=1;j<pts.length-2;j++){const a=pts[j],b=pts[j+1],lx=Math.min(a[0],b[0]),hx=Math.max(a[0],b[0]),ly=Math.min(a[1],b[1]),hy=Math.max(a[1],b[1]);
   if(rects.some(r=>!skip.includes(r.id)&&hx>r.x+2&&lx<r.x+W-2&&hy>r.y+2&&ly<r.y+H-2))return true}return false}
@@ -165,6 +203,7 @@ function wfFP(e,G,own){const p=id=>own&&own.n&&own.n[id]?own.n[id]:G.pos.get(id)
 /* ----- rendering ----- */
 function wfDiagram(nodes,o){
   if(!nodes.length){ui.wfDia=o.ctx?{nodes:[],o,cx:wfLayCtx(o.ctx),id:wfCtxId(wfLayCtx(o.ctx)),G:null}:null;return `<div class="wfdia${ui.wfFs?' fs':''}" data-wfdia>${ui.wfFs&&o.fsHead?`<div class="wffs-head">${o.fsHead}</div>`:''}${o.ctx?wfLayBar(wfLayCtx(o.ctx),null):''}<div class="wfd-empty">${o.empty||'Nothing to show for this selection.'}</div></div>`}
+  wfDeriveFor(nodes,o);
   const cx=wfLayCtx(o.ctx),lay=cx?wfLayEff(cx):{n:{},l:{},z:{},e:{}},G=wfGeom(nodes,o,lay);
   ui.wfDia={nodes,o,cx,id:cx?wfCtxId(cx):null,G};
   if(ui.wfEdge&&!G.edges.some(e=>e.k===ui.wfEdge))ui.wfEdge=null;
@@ -190,7 +229,7 @@ function wfDiagram(nodes,o){
 /* zones: headers, boundaries (draggable in Edit layout) and a light background; the Outputs boundary is the dotted separator */
 function wfZonesHTML(G,cx,editing){
   if(prefs.wfZones===false)return '';
-  const glob=!!G.phases,phN=!glob&&cx&&cx.key&&!/^_/.test(cx.key)?phName(cx.key):'',X0=WFL.LW;
+  const glob=!!G.phases,phN=!glob&&cx&&cx.key&&!/^_/.test(cx.key)?phName(wfKeyBase(cx.key)):'',X0=WFL.LW;
   const zName=z=>['Inputs','Actions','Outputs'][z%3]+(z%3===2&&phN?' — '+esc(phN):'');
   const present=[];for(let z=0;z<G.nz;z++)if(G.zr[z])present.push(z);if(!present.length)return '';
   const start=z=>z===present[0]?X0:G.zb[z],end=z=>{const nx=present.find(k=>k>z);return nx!=null?G.zb[nx]:G.wd};
@@ -245,6 +284,7 @@ function wfLayBar(cx,G){
   else if(E)ctx=`<span class="wflay-e"><b>${esc(G.by.get(E.a).name)} → ${esc(G.by.get(E.b).name)}</b> · drag a segment or an end · double-click the line to add a bend</span>${b('route-reset','Reset selected route',!ed,'Back to the automatic route and connection points for this arrow only')}${cx.scope==='std'&&cx.canLink&&!G.by.get(E.a).ref?b('recon-a','Reconnect source…',!ed,'Choose another activity that provides this requirement'):''}${cx.scope==='std'&&cx.canLink?b('recon-b','Reconnect target…',!ed,'Choose another activity that needs this requirement'):''}`;
   else if(selStep&&cx.scope==='std'&&cx.canLink&&!selStep.ref)ctx=`<span class="wflay-e"><b>${esc(selStep.name)}</b></span>${b('prereq','Add prerequisites…',false,'Choose what this activity needs, also from other phases')}`;
   else if(selStep&&cx.scope==='proj')ctx=`<span class="wflay-e"><b>${esc(selStep.name)}</b></span>${b('goto-std','Edit in Company workflow',false,'Dependencies are defined in the company standard')}`;
+  else if(ui.wfLocate&&G&&G.pos.has(ui.wfLocate))ctx=`<span class="wflay-e"><b>${esc(G.by.get(ui.wfLocate).name)}</b> was added outside the visible area · nothing else moved</span>${b('locate','Locate new activity',false,'Scroll to the new activity and select it')}`;
   const anyRoute=!!(cx.own&&cx.own.e&&Object.keys(cx.own.e).length)||(cx.scope==='proj'&&cx.base&&cx.base.e&&Object.keys(cx.base.e).length&&!(cx.own&&cx.own.auto));
   return `<div class="wflay-bar" role="toolbar" aria-label="Diagram layout">
     <button type="button" class="btn sm${ui.wfLayEdit?' primary':''}" data-wflay="edit" aria-pressed="${!!ui.wfLayEdit}"${ed&&has?'':' disabled'} title="Zone boundaries, multiple selection, alignment and connection points">Edit layout</button>
@@ -317,6 +357,7 @@ document.addEventListener('click',e=>{const bt=e.target.closest&&e.target.closes
   if(k==='multi-clear'){ui.wfMulti=[];wfRerender();return}
   if(k==='zones'){prefs.wfZones=prefs.wfZones===false;savePrefs();wfRerender();return}
   if(k==='fs'){wfFullScreen(!ui.wfFs);return}
+  if(k==='locate'){wfLocate(ui.wfLocate);return}
   if(k==='fit-view'){wfFitView();return}
   if(k==='zoom-in'||k==='zoom-out'||k==='zoom-reset'){wfSetZoom(k==='zoom-reset'?1:wfZoomStep(wfZoom(),k==='zoom-in'?1:-1));const x=document.querySelector(`[data-wflay=${k}]`);x&&!x.disabled&&x.focus({preventScroll:true});return}
   if(k==='menu-close'){ui.wfMenu=null;wfRerender();const n=document.getElementById('wfn-'+ui.wfSel);n&&n.focus({preventScroll:true});return}
@@ -328,7 +369,7 @@ document.addEventListener('click',e=>{const bt=e.target.closest&&e.target.closes
   if(k==='conn'){ui.wfConn=ui.wfConn?null:{from:null};ui.wfEdge=null;ui.wfRecon=null;ui.wfMenu=null;wfRerender();return}
   if(k==='recon-a'||k==='recon-b'){ui.wfRecon={k:ui.wfEdge,which:k==='recon-a'?'a':'b'};ui.wfConn=null;wfRerender();return}
   if(k==='undo'||k==='redo'){const h=wfHist(cx),from=k==='undo'?h.u:h.r,to=k==='undo'?h.r:h.u;if(!from.length)return;to.push(wfSnapshot(cx));wfRestore(cx,from.pop());const x=document.querySelector(`[data-wflay=${k}]`);x&&!x.disabled&&x.focus({preventScroll:true});return}
-  if(k==='auto'){const keep=cx.own&&cx.own.e&&Object.keys(cx.own.e).length?wfClone(cx.own.e):{};wfLayCommit(cx,cx.scope==='std'?(Object.keys(keep).length?{n:{},l:{},e:keep}:null):{auto:true,n:{},l:{},e:keep});toast('Automatic layout: Inputs → Actions → Outputs. Adjusted arrows keep their connection points and routes where they still fit.');return}
+  if(k==='auto'){const keep=cx.own&&cx.own.e&&Object.keys(cx.own.e).length?wfClone(cx.own.e):{};wfLayCommit(cx,cx.scope==='std'&&!/~/.test(cx.key)?(Object.keys(keep).length?{n:{},l:{},e:keep}:null):{auto:true,n:{},l:{},e:keep});toast('Automatic layout: Inputs → Actions → Outputs. Adjusted arrows keep their connection points and routes where they still fit.');return}
   if(k==='reset'){wfLayCommit(cx,cx.scope==='std'?(cx.pub?wfClone(cx.pub):null):null);toast(cx.scope==='std'?'Layout of this phase back to the published one. Activities and dependencies are unchanged.':'Back to the standard’s layout. Activities and dependencies are unchanged.');return}
   if(k==='route-reset'&&ui.wfEdge){const own=wfOwnCopy(cx),key=ui.wfEdge;if(cx.scope==='proj'&&cx.base&&cx.base.e&&cx.base.e[key]&&!(cx.own&&cx.own.auto))own.e[key]={auto:true};else delete own.e[key];wfLayCommit(cx,own);return}
   if(k==='routes-reset'){const own=wfOwnCopy(cx);own.e={};if(cx.scope==='proj'&&cx.base&&cx.base.e&&!(cx.own&&cx.own.auto))Object.keys(cx.base.e).forEach(x=>{own.e[x]={auto:true}});wfLayCommit(cx,own);toast('All arrows of this view use their automatic routes again. Dependencies and block positions are unchanged.');return}
@@ -413,7 +454,7 @@ document.addEventListener('click',e=>{
   if(ui.wfLayEdit&&cx.canEdit&&(e.shiftKey||e.ctrlKey||e.metaKey)){e.stopImmediatePropagation();e.preventDefault();const id=n.dataset.id,m=ui.wfMulti||[];
     ui.wfMulti=m.includes(id)?m.filter(x=>x!==id):[...m,id];ui.wfEdge=null;ui.wfMenu=null;wfRerender();return}
   /* Company workflow: select the block and offer a small menu next to it (the view does not move) */
-  if(cx.scope==='std'){e.stopImmediatePropagation();e.preventDefault();const id=n.dataset.id;ui.wfSel=id;ui.wfEdge=null;ui.wfMenu=id;wfRerender();
+  if(cx.scope==='std'){e.stopImmediatePropagation();e.preventDefault();const id=n.dataset.id;ui.wfSel=id;ui.wfEdge=null;ui.wfMenu=id;if(ui.wfLocate===id)ui.wfLocate=null;wfRerender();
     const b=document.querySelector('.wfmenu button');b&&b.focus({preventScroll:true});return}
 },true);
 document.addEventListener('keydown',e=>{
@@ -445,7 +486,12 @@ function wfZoneOwn(p,dx,final){const D=ui.wfDia,G=p.G0,own=wfOwnCopy(p.cx),d=Mat
   if(final)wfDims(own,D.nodes,D.o,p.cx);return own}
 /* Fit zones to content: empty vertical bands wider than needed shrink (order, lanes and vertical positions kept) */
 function wfFitZones(cx){
-  const D=ui.wfDia,lay=wfLayEff(cx),G=wfGeom(D.nodes,D.o,lay),own=wfOwnCopy(cx),{W,GX,ZFIT,LW,P}=WFL;wfFreeze(own,G,D.nodes);
+  const D=ui.wfDia,own=wfCompact(D.nodes,D.o,wfLayEff(cx),wfOwnCopy(cx),cx);
+  wfLayCommit(cx,own);toast('Zones fitted to their content. Order, specialties and dependencies are unchanged.');
+}
+/* remove empty vertical bands (between and inside zones), keeping order, lanes and vertical positions */
+function wfCompact(nodes,o,lay,own,cx){
+  const G=wfGeom(nodes,o,lay),{W,GX,ZFIT,LW,P}=WFL;wfFreeze(own,G,nodes);const D={nodes,o};
   const items=D.nodes.map(n=>({id:n.id,x:G.pos.get(n.id).x,z:G.Z.get(n.id)})).sort((a,b)=>a.x-b.x);
   const cl=[];items.forEach(it=>{const c=cl[cl.length-1];if(c&&it.x<c.end)c.end=Math.max(c.end,it.x+W),c.ids.push(it.id),c.z=Math.max(c.z,it.z);else cl.push({start:it.x,end:it.x+W,ids:[it.id],z:it.z,z0:it.z})});
   let shift=0;const shifts=[];cl.forEach((c,i)=>{const gap=i===0?c.start-(LW+P):c.start-cl[i-1].end,target=i===0?0:(Math.floor(c.z0/3)>Math.floor(cl[i-1].z/3)?WFL.PFIT:c.z0>cl[i-1].z?ZFIT:GX);shift+=Math.max(0,gap-target);shifts.push({from:c.start,shift})});
@@ -453,7 +499,19 @@ function wfFitZones(cx){
   cl.forEach((c,i)=>c.ids.forEach(id=>{own.n[id].x=Math.round(own.n[id].x-shifts[i].shift)}));
   G.edges.forEach(e=>{if(!e.manual)return;own.e[e.k]={...(own.e[e.k]||{}),s:wfCoordsStore(e,e.coords.map((v,i)=>((i%2===0)===e.hz)?v-sh(v):v),G),f:wfFP(e,G,own)}});
   own.zg={};const Gn=wfDims(own,D.nodes,D.o,cx);for(let z=1;z<Gn.nz;z++){if(Gn.zr[z]){let pm=-Infinity;for(let k=0;k<z;k++)if(Gn.zr[k])pm=Math.max(pm,Gn.zr[k].max);if(pm>-Infinity)own.zg[z]=Math.max(WFL.ZMIN,Math.round(Gn.zr[z].min-pm))}}
-  wfLayCommit(cx,own);toast('Zones fitted to their content. Order, specialties and dependencies are unchanged.');
+  return own;
+}
+/* the first layout of a filtered view: the visible blocks where the all-specialties view has them, without the
+   space the hidden ones used; nothing is saved until it is changed, and the all-specialties view is never touched */
+function wfDeriveFor(nodes,o){
+  const c=o.ctx;if(!c||!/~/.test(c.key))return;const id=c.scope==='std'?'std::'+c.key:'proj:'+c.pid+':'+c.key;
+  const has=c.scope==='std'?!!(wfEdit().layout||{})[c.key]:!!((project(c.pid)||{}).wfLayout||{})[c.key]||!!(wfStd().layout||{})[c.key];
+  ui.wfDerived=ui.wfDerived||{};if(has){delete ui.wfDerived[id];return}
+  const full=wfLayCtx({...c,key:wfKeyBase(c.key)}),src=full?wfLayEff(full):null,ids=new Set(nodes.map(n=>n.id));
+  const sig=JSON.stringify([src,[...ids]]);if(ui.wfDerived[id]&&ui.wfDerived[id].sig===sig)return;
+  const lay={n:{},l:{},e:{}};if(src){Object.entries(src.n||{}).forEach(([k,p])=>{if(ids.has(k))lay.n[k]={...p}});Object.entries(src.e||{}).forEach(([k,v])=>{const [a,b]=k.split('>');if(ids.has(a)&&ids.has(b)&&v&&!v.auto)lay.e[k]=wfClone(v)})}
+  if(!Object.keys(lay.n).length){ui.wfDerived[id]={sig,lay:null};return}
+  ui.wfDerived[id]={sig,lay:wfCompact(nodes,o,lay,wfClone(lay),{scope:'std',key:c.key,own:lay})};
 }
 
 /* ----- moving blocks ----- */
@@ -607,30 +665,44 @@ async function wfAskReconnect(id){
 }
 /* a new dependency never leaves a manually placed activity before what it needs: it (and what follows it) moves right */
 function wfFixOrder(dr,ph){
-  if(ph!=='_global')wfFixOrder(dr,'_global');   // the All phases layout follows the same rule
-  const L=dr.layout&&dr.layout[ph];if(!L||!L.n)return;const {W,GAP}=WFL,steps=dr.steps.filter(s=>!s.retired),cz=s=>s.cat==='input'?0:s.cat==='action'?1:2,pi=id=>Math.max(0,S.phases.findIndex(g=>g.id===id));
-  const zone=ph==='_global'?s=>pi(s.phaseId)*3+cz(s):s=>s.phaseId!==ph?0:cz(s);
+  /* every view of that phase (all specialties and each filter) and every All phases view follows the same rule */
+  if(!/~/.test(ph)&&ph!=='_global'){Object.keys(dr.layout||{}).filter(k=>k!==ph&&(wfKeyBase(k)===ph||wfKeyBase(k)==='_global')).forEach(k=>wfFixOrder(dr,k))}
+  const L=dr.layout&&dr.layout[ph];if(!L||!L.n)return;const glob=wfKeyBase(ph)==='_global';ph=wfKeyBase(ph);const {W,GAP}=WFL,steps=dr.steps.filter(s=>!s.retired),cz=s=>s.cat==='input'?0:s.cat==='action'?1:2,pi=id=>Math.max(0,S.phases.findIndex(g=>g.id===id));
+  const zone=glob?s=>pi(s.phaseId)*3+cz(s):s=>s.phaseId!==ph?0:cz(s);
   for(let g=0;g<50;g++){let changed=false;
     steps.forEach(s=>{const q=L.n[s.id];if(!q)return;s.deps.forEach(d=>{const ds=wfStep(d,dr),pq=L.n[d];if(!ds||!pq||zone(ds)>zone(s))return;const need=pq.x+W+GAP;
       if(q.x<need){const dx=need-q.x,mv=new Set([s.id]),st=[s.id];while(st.length){const x=st.pop();steps.forEach(y=>{if(y.deps.includes(x)&&!mv.has(y.id)&&L.n[y.id]&&L.n[y.id].x>=q.x){mv.add(y.id);st.push(y.id)}})}
         mv.forEach(id=>{L.n[id].x+=dx});changed=true}})});
     if(!changed)break}
 }
-/* a new activity in a phase with an arranged layout goes at the START of its zone (left of the first one of that
-   category); when its lane has no room there, the blocks from that position on move right to make space */
-function wfInsertInLayout(dr,s){
-  const L=dr.layout&&dr.layout[s.phaseId];if(!L||!L.n||!Object.keys(L.n).length)return;
-  const g=wfStdNodes(dr,s.phaseId,null),others=g.nodes.filter(n=>n.id!==s.id),{W,GX,ZG,TOP,H,GY}=WFL,X0=WFL.LW+WFL.P;
-  const G=wfGeom(others,{mode:'std',std:dr},{n:L.n,l:L.l||{},z:L.z||{},e:L.e||{}}),z=s.cat==='input'?0:s.cat==='action'?1:2,lane=wfSpecOf(s);
-  const inZ=others.filter(n=>G.Z.get(n.id)===z),prev=others.filter(n=>G.Z.get(n.id)<z);
-  let x=inZ.length?Math.min(...inZ.map(n=>G.pos.get(n.id).x)):(prev.length?Math.max(...prev.map(n=>G.pos.get(n.id).x+W))+ZG:X0);
-  others.forEach(n=>{const q=G.pos.get(n.id);L.n[n.id]={x:Math.round(q.x),dy:Math.round(q.dy)}});
-  const sameLane=others.filter(n=>n.lane===lane),over=dy=>sameLane.some(n=>{const q=L.n[n.id];return q.x<x+W+8&&q.x+W+8>x&&q.dy<dy+H+GY&&q.dy+H+GY>dy});
-  if(over(TOP)){const dx=W+GX;others.forEach(n=>{if(L.n[n.id].x>=x)L.n[n.id].x+=dx});
-    Object.keys(L.e||{}).forEach(k=>{const r=L.e[k];if(r&&r.s)r.s=r.s.map(v=>typeof v==='number'&&v>=x?v+dx:v)});if(L.z){if(L.z[1]>=x)L.z[1]+=dx;if(L.z[2]>=x)L.z[2]+=dx}}
-  let dy=TOP,gi=0;while(over(dy)&&gi++<100)dy+=H+GY;
-  L.n[s.id]={x:Math.round(x),dy};
+/* a new (or moved to another lane / zone) activity: in every SAVED view that shows it, only that block is placed, in a free
+   slot of its lane and zone (wfSlot); the other blocks, lanes, zone spaces and routes stay as they are. Views whose
+   filters exclude it are not touched; views without a saved layout simply show it. hint = visible area of the current view */
+function wfPlaceInViews(dr,s,hint){
+  const phs=wfPhOrder(dr.steps.filter(x=>!x.retired).map(x=>x.phaseId));
+  Object.keys(dr.layout||{}).forEach(k=>{const base=wfKeyBase(k),sp=wfKeySpecs(k),L=dr.layout[k];
+    if(base!==s.phaseId&&base!=='_global')return;if(sp&&!sp.includes(wfSpecOf(s)))return;if(!L||!L.n||!Object.keys(L.n).length)return;
+    delete L.n[s.id];
+    const g=base==='_global'?wfStdNodesAll(dr,phs,sp):wfStdNodes(dr,base,sp);if(!g.nodes.some(n=>n.id===s.id))return;
+    const o={mode:'std',std:dr,phases:base==='_global'?wfPhOrder(g.nodes.map(n=>n.ph)):null};
+    const G=wfGeom(g.nodes,o,{n:L.n,l:L.l||{},z:L.z||{},zg:L.zg||{},e:L.e||{},hint:hint&&hint.key===k?{...hint,id:s.id}:null}),q=G.pos.get(s.id);
+    if(q)L.n[s.id]={x:Math.round(q.x),dy:Math.round(q.dy)}});
 }
+/* the visible part of the current diagram, in diagram coordinates (for placing a new activity where the user looks) */
+function wfViewHint(){const D=ui.wfDia,w=document.querySelector('.wfd-wrap');if(!D||!D.G||!w||!D.cx)return null;const z=wfZoom();
+  return {key:D.cx.key,x0:w.scrollLeft/z,x1:(w.scrollLeft+w.clientWidth)/z,y0:w.scrollTop/z,y1:(w.scrollTop+w.clientHeight)/z,bandY:Object.fromEntries(D.G.bands.map(b=>[b.l,b.y]))}}
+/* is a block inside the visible part of the diagram (its own scroll area, whatever the page scroll) */
+function wfInView(id){const n=document.getElementById('wfn-'+id),w=document.querySelector('.wfd-wrap');if(!n||!w)return false;const z=wfZoom(),x=parseFloat(n.style.left)*z,y=parseFloat(n.style.top)*z;
+  return x+WFL.W*z>w.scrollLeft&&x<w.scrollLeft+w.clientWidth&&y+WFL.H*z>w.scrollTop&&y<w.scrollTop+w.clientHeight}
+function wfInsertInLayout(dr,s,hint){wfPlaceInViews(dr,s,hint)}
+/* an activity that leaves its lane or zone, or the standard: its old place no longer applies in any view */
+function wfForget(dr,id,keepEdges){Object.values(dr.layout||{}).forEach(L=>{if(!L)return;if(L.n)delete L.n[id];if(!keepEdges&&L.e)Object.keys(L.e).forEach(k=>{const [a,b]=k.split('>');if(a===id||b===id)delete L.e[k]})})}
+/* "Locate new activity": the new block is outside the visible area */
+function wfLocate(id){ui.wfLocate=null;ui.wfSel=id;ui.wfMenu=null;wfRerender();
+  const n=document.getElementById('wfn-'+id),w=document.querySelector('.wfd-wrap'),k=ui.wfDia&&ui.wfDia.id;if(!n||!w)return;
+  const z=wfZoom(),l=Math.max(0,parseFloat(n.style.left)*z-w.clientWidth/2+WFL.W*z/2),t=Math.max(0,parseFloat(n.style.top)*z-w.clientHeight/2);
+  w.scrollLeft=l;w.scrollTop=t;if(k){ui.wfScroll=ui.wfScroll||{};ui.wfScroll[k]={l:w.scrollLeft,t:w.scrollTop}}
+  n.scrollIntoView({block:'nearest',inline:'nearest'});n.classList.add('flash');n.focus({preventScroll:true});setTimeout(()=>n.classList.remove('flash'),1600)}
 /* several arrows close together: the one under the pointer is highlighted */
 document.addEventListener('pointerover',e=>{const h=e.target.closest&&e.target.closest('.wfe-hit');if(!h)return;const k=h.dataset.wfe;document.querySelectorAll('.wfe.hov').forEach(x=>x.classList.remove('hov'));const p=document.querySelector(`path.wfe[data-k="${CSS.escape(k)}"]`);p&&p.classList.add('hov')},true);
 document.addEventListener('pointerout',e=>{if(e.target.closest&&e.target.closest('.wfe-hit'))document.querySelectorAll('.wfe.hov').forEach(x=>x.classList.remove('hov'))},true);
