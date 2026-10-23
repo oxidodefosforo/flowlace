@@ -120,6 +120,21 @@ module.exports = async function run() {
     await H.shot(w, 'views-electrical');
   });
 
+  await step('2b · Mechanical: after widening the Inputs | Actions space, an Action can still come back up to the minimum gap (the stored space is not a wall)', async () => {
+    await specs([M]);
+    await w.click('[data-wflay=edit]');
+    const c = await T.center('.wfzb[data-zb="1"]'); await T.dragFrom(c, 160 * (await zoom()), 0);
+    await w.click('[data-wflay=edit]');
+    const S = await screen(), inRight = Math.max(...Object.entries(S).filter(([id]) => ['me-in1', 'co-in1', 'fee-co-out'].includes(id)).map(([, q]) => q[0] + W));
+    const a0 = await box('me-out1');
+    assert.ok(a0.x - inRight >= 150, 'space widened: ' + (a0.x - inRight));
+    await drag('me-out1', -400, 0);
+    const a1 = await box('me-out1');
+    assert.ok(a1.x - inRight <= 41 && a1.x - inRight >= 39, `the Action moves back to the minimum space after the Inputs (gap ${a1.x - inRight})`);
+    await w.click('[data-wflay=undo]'); await H.sleep(150); await w.click('[data-wflay=undo]'); await H.sleep(200);
+    await specs([E]); elec1 = await screen();
+  });
+
   await step('3 · back to All specialties: its layout, spaces and boundaries as they were', async () => {
     await specs([]);
     samePos(full1, await screen(), 'every block where it was');

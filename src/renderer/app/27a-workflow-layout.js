@@ -325,7 +325,10 @@ const wfOwnCopy=cx=>{const o=cx.own?wfClone(cx.own):{n:{},l:{},e:{}};o.n=o.n||{}
 /* once the user arranges something, every visible block keeps its current place, so nothing else jumps */
 function wfFreeze(own,G,nodes){nodes.forEach(n=>{const p=G.pos.get(n.id);own.n[n.id]={x:Math.round(p.x),dy:Math.round(p.dy)}})}
 /* lanes and zones as the content needs them now (stored with the operation) */
-function wfDims(own,nodes,o,cx){const G=wfGeom(nodes,o,wfLayEff({...cx,own:{...own,l:{},z:{}}}));G.bands.forEach(b=>{own.l[b.l]={h:b.content}});const z={};for(let k=1;k<G.nz;k++)if(G.zr[k])z[k]=G.zr[k].min;own.z=z;return G}
+function wfDims(own,nodes,o,cx){const G=wfGeom(nodes,o,wfLayEff({...cx,own:{...own,l:{},z:{}}}));G.bands.forEach(b=>{own.l[b.l]={h:b.content}});const z={};for(let k=1;k<G.nz;k++)if(G.zr[k])z[k]=G.zr[k].min;own.z=z;
+  /* a zone space the user widened shrinks when blocks are moved closer: it never keeps an empty band as a barrier */
+  if(own.zg)for(const k of Object.keys(own.zg)){const zz=+k;if(!G.zr[zz])continue;let pm=-Infinity;for(let j=0;j<zz;j++)if(G.zr[j])pm=Math.max(pm,G.zr[j].max);if(pm>-Infinity){const gap=Math.round(G.zr[zz].min-pm);if(gap<own.zg[k])own.zg[k]=Math.max(WFL.ZMIN,gap)}}
+  return G}
 const wfCurCtx=()=>{const D=ui.wfDia;return D&&D.cx?wfLayCtx(D.o.ctx):null};
 document.addEventListener('scroll',e=>{const w=e.target;if(w&&w.classList&&w.classList.contains('wfd-wrap')&&w.dataset.wfctx){ui.wfScroll=ui.wfScroll||{};ui.wfScroll[w.dataset.wfctx]={l:w.scrollLeft,t:w.scrollTop}}},true);
 
@@ -524,8 +527,10 @@ function wfDragStart(p){
   G.edges.forEach(e=>{if(e.conflict)return;const A=G.pos.get(e.a),B=G.pos.get(e.b);
     if(!set.has(e.a)&&set.has(e.b))lo=Math.max(lo,Math.min(0,A.x+W+GAP-B.x));
     if(set.has(e.a)&&!set.has(e.b))hi=Math.min(hi,Math.max(0,B.x-(A.x+W+GAP)))});
-  set.forEach(id=>{const z=G.Z.get(id);if(!z)return;let m=-Infinity;D.nodes.forEach(n=>{const zn=G.Z.get(n.id);if(!set.has(n.id)&&zn<z)m=Math.max(m,G.pos.get(n.id).x+W+wfZGap(lay,z,zn))});if(m>-Infinity)lo=Math.max(lo,Math.min(0,m-G.pos.get(id).x))});
-  Object.assign(p,{G0:G,set,lo:Math.min(lo,0),hi:Math.max(hi,0),me,snap:{}});
+  set.forEach(id=>{const z=G.Z.get(id);if(!z)return;let m=-Infinity;D.nodes.forEach(n=>{const zn=G.Z.get(n.id);if(!set.has(n.id)&&zn<z)m=Math.max(m,G.pos.get(n.id).x+W+WFL.ZMIN)});/* only the minimum space: a widened zone space is not a wall */if(m>-Infinity)lo=Math.max(lo,Math.min(0,m-G.pos.get(id).x))});
+  /* the space each zone has now: pushing a later zone keeps it (or the usual space, if smaller), never more */
+  const gap0={};for(let z=1;z<G.nz;z++){if(!G.zr[z])continue;let pm=-Infinity;for(let k=0;k<z;k++)if(G.zr[k])pm=Math.max(pm,G.zr[k].max);if(pm>-Infinity)gap0[z]=G.zr[z].min-pm}
+  Object.assign(p,{G0:G,set,lo:Math.min(lo,0),hi:Math.max(hi,0),me,snap:{},gap0});
   if(p.el)p.el.classList.add('dragging');
 }
 /* alignment guides: edges and centres of the other visible blocks (x: any lane; y: same lane) */
@@ -551,7 +556,7 @@ function wfDragOwn(p,dx0,dy0,final){
   const moved=new Map();p.set.forEach(id=>{own.n[id].x=Math.round(G.pos.get(id).x+ddx);moved.set(id,ddx)});own.n[p.id].dy=ndy;
   /* zones follow the content: a later zone moves right when an earlier one needs the space */
   /* (only the blocks that stay still are pushed; the moving set keeps its own distances) */
-  for(let z=1;z<G.nz;z++){let need=-Infinity,minZ=Infinity;D.nodes.forEach(n=>{const zz=G.Z.get(n.id),q=own.n[n.id];if(zz<z)need=Math.max(need,q.x+W+wfZGap(p.lay,z,zz));else if(zz===z&&!p.set.has(n.id))minZ=Math.min(minZ,q.x)});
+  for(let z=1;z<G.nz;z++){let need=-Infinity,minZ=Infinity;D.nodes.forEach(n=>{const zz=G.Z.get(n.id),q=own.n[n.id];if(zz<z)need=Math.max(need,q.x+W+Math.min(wfZGap(p.lay,z,zz),p.gap0[z]==null?Infinity:Math.max(WFL.ZMIN,p.gap0[z])));else if(zz===z&&!p.set.has(n.id))minZ=Math.min(minZ,q.x)});
     if(need>-Infinity&&minZ<Infinity&&minZ<need){const d=Math.round(need-minZ);D.nodes.forEach(n=>{if(G.Z.get(n.id)>=z&&!p.set.has(n.id)){own.n[n.id].x+=d;moved.set(n.id,(moved.get(n.id)||0)+d)}})}}
   /* routes between blocks that moved by the same amount keep their shape */
   G.edges.forEach(e=>{if(!e.manual)return;const a=moved.get(e.a),b=moved.get(e.b);if(a&&a===b)own.e[e.k]={...(own.e[e.k]||{}),s:wfCoordsStore(e,e.coords.map((v,i)=>((i%2===0)===e.hz)?v+a:v),G),f:wfFP(e,G,own)}});
@@ -623,7 +628,7 @@ function wfAlign(cx,k){
   const D=ui.wfDia,G=wfGeom(D.nodes,D.o,wfLayEff(cx)),ids=(ui.wfMulti||[]).filter(id=>G.pos.has(id));if(ids.length<2)return;
   const {W,H,GY,GAP}=WFL,lay=wfLayEff(cx),own=wfOwnCopy(cx);wfFreeze(own,G,D.nodes);const ref=G.pos.get(ids[0]),lane=id=>G.by.get(id).lane;let skipped=[];
   const okX=(id,x)=>{const edges=G.edges.filter(e=>!e.conflict&&(e.a===id||e.b===id));for(const e of edges){if(e.b===id&&x<own.n[e.a].x+W+GAP)return 'a requirement would be after it';if(e.a===id&&own.n[e.b].x<x+W+GAP)return 'an activity that needs it would be before it'}
-    const z=G.Z.get(id);for(const n of D.nodes){if(n.id===id)continue;const zz=G.Z.get(n.id),q=own.n[n.id];if(zz<z&&x<q.x+W+wfZGap(lay,z,zz))return 'it would enter an earlier zone';if(zz>z&&x+W+wfZGap(lay,zz,z)>q.x)return 'it would enter a later zone'}
+    const z=G.Z.get(id);for(const n of D.nodes){if(n.id===id)continue;const zz=G.Z.get(n.id),q=own.n[n.id];if(zz<z&&x<q.x+W+WFL.ZMIN)return 'it would enter an earlier zone';if(zz>z&&x+W+WFL.ZMIN>q.x)return 'it would enter a later zone'}
     for(const n of D.nodes){if(n.id!==id&&lane(n.id)===lane(id)&&Math.abs(own.n[n.id].x-x)<W+8&&Math.abs(own.n[n.id].dy-own.n[id].dy)<H+GY)return 'it would overlap another block'}return null};
   const okY=(id,dy)=>{if(lane(id)!==lane(ids[0]))return 'rows are shared only inside the same specialty';for(const n of D.nodes){if(n.id!==id&&lane(n.id)===lane(id)&&Math.abs(own.n[n.id].x-own.n[id].x)<W+8&&Math.abs(own.n[n.id].dy-dy)<H+GY)return 'it would overlap another block'}return null};
   const tryX=(id,x)=>{const r=okX(id,Math.round(x));if(r)skipped.push(`${G.by.get(id).name}: ${r}`);else own.n[id].x=Math.round(x)};
