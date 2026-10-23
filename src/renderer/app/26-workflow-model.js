@@ -5,13 +5,14 @@ function wfNormStd(w,phaseIds,svIds){
   const ids=new Set(),steps=[];
   w.steps.forEach((s,i)=>{if(!s||!s.id||ids.has(s.id)||!phaseIds.has(s.phaseId))return;ids.add(s.id);
     steps.push({id:String(s.id),phaseId:s.phaseId,serviceId:svIds.has(s.serviceId)?s.serviceId:null,cat:WF_CAT[s.cat]?s.cat:'action',name:String(s.name||'Untitled step').slice(0,160),desc:String(s.desc||''),deps:Array.isArray(s.deps)?s.deps.map(String):[],order:typeof s.order==='number'?s.order:i,retired:!!s.retired,createdAt:s.createdAt||null,roleIds:[...new Set(arr(s.roleIds).map(String))],
-      type:WF_TYPE[s.type]?s.type:'normal',question:String(s.question||'').slice(0,300),branches:s.branches&&typeof s.branches==='object'?{yes:s.branches.yes?String(s.branches.yes):null,no:s.branches.no?String(s.branches.no):null}:{yes:null,no:null}})});
+      ret:[...new Set(arr(s.ret).map(String))],type:WF_TYPE[s.type]?s.type:'normal',question:String(s.question||'').slice(0,300),branches:s.branches&&typeof s.branches==='object'?{yes:s.branches.yes?String(s.branches.yes):null,no:s.branches.no?String(s.branches.no):null}:{yes:null,no:null}})});
   const byId=new Map(steps.map(s=>[s.id,s]));
   /* links across phases and specialties are kept; only self links, duplicates, missing or retired steps go */
   steps.forEach(s=>{s.deps=[...new Set(s.deps)].filter(d=>d!==s.id&&byId.has(d)&&!byId.get(d).retired)});
-  const std={version:Math.max(0,parseInt(w.version)||0),appliedAt:w.appliedAt||null,demo:!!w.demo,schema:2,demoV2:!!w.demoV2,steps,layout:wfLayoutsNorm(w.layout)};
+  const legacy=(parseInt(w.schema)||0)<3;
+  const std={version:Math.max(0,parseInt(w.version)||0),appliedAt:w.appliedAt||null,demo:!!w.demo,schema:3,demoV2:!!w.demoV2,steps,layout:wfLayoutsNorm(w.layout)};
   steps.forEach(s=>{s.deps=s.deps.filter(d=>!wfReaches({steps},d,s.id))}); // break any loop in a hand-edited backup
-  wfBranchNorm(steps);
+  wfBranchNorm(steps,legacy);
   return std;
 }
 function normWF(o,d){
@@ -26,7 +27,9 @@ function normWF(o,d){
     t.wfExecutionMode=t.wfExecutionMode==='externalInput'?'externalInput':'internal';   // tasks generated before v2 are previously imported internal activities
     t.wfConsultant=String(t.wfConsultant||'');t.wfOutOfScope=!!t.wfOutOfScope;t.wfReview=!!t.wfReview;t.wfModeLog=arr(t.wfModeLog).filter(x=>x&&x.to);
     /* answer of a Decision / QA in this project (Pending = null) and its history */
-    t.wfAnswer=t.wfAnswer==='yes'||t.wfAnswer==='no'?t.wfAnswer:null;t.wfAnswerLog=arr(t.wfAnswerLog).filter(x=>x&&x.at)});
+    t.wfAnswer=t.wfAnswer==='yes'||t.wfAnswer==='no'?t.wfAnswer:null;t.wfAnswerLog=arr(t.wfAnswerLog).filter(x=>x&&x.at);
+    /* review rounds: one task per activity; earlier completions and rounds are kept here */
+    t.wfRound=Math.max(1,parseInt(t.wfRound)||1);t.wfAttempts=arr(t.wfAttempts).filter(x=>x&&x.at);t.wfRetFor=t.wfRetFor||null});
   o.deliverables.forEach(x=>{x.reqTaskIds=[...new Set(arr(x.reqTaskIds))].filter(id=>{const t=tasksBy.get(id);return t&&t.projectId===x.projectId})});
   const steps=new Map(((o.workflow||{}).steps||[]).map(s=>[s.id,s]));
   o.projects.forEach(p=>{p.wfVersion=parseInt(p.wfVersion)||0;
@@ -40,14 +43,28 @@ function normWF(o,d){
     const pes=new Set(o.people.map(x=>x.id)),rm={};if(p.wfRoleMap&&typeof p.wfRoleMap==='object')Object.entries(p.wfRoleMap).forEach(([k,v])=>{if(/^[^|]+\|[^|]+$/.test(k)&&pes.has(v))rm[k]=v});p.wfRoleMap=rm});
 }
 
-/* Decision / QA outlets: { yes: stepId | null, no: stepId | null }. A conditional link is also kept in the target's
-   "Depends on" (so import, order and loop checks see it); the decision's branches mark which of those links are conditional. */
-function wfBranchNorm(steps){const by=new Map(steps.map(s=>[s.id,s]));
-  steps.forEach(s=>{if(!wfIsDec(s)){s.branches={yes:null,no:null};return}const b=s.branches||{};const out={yes:null,no:null};
-    WF_BR.forEach(([k])=>{const t=b[k]&&by.get(b[k]);if(!t||t.id===s.id||t.retired)return;if(k==='no'&&out.yes===t.id)return;
-      if(!t.deps.includes(s.id)){if(wfReaches({steps},s.id,t.id))return;t.deps.push(s.id)}out[k]=t.id});s.branches=out})}
-/* the conditional link that leads to a step, if any: [{d: decision step, b: 'yes'|'no'}] */
-function wfCondIn(stepId,std){return (std||wfStd()).steps.filter(d=>!d.retired&&wfIsDec(d)&&d.branches&&(d.branches.yes===stepId||d.branches.no===stepId)).map(d=>({d,b:d.branches.yes===stepId?'yes':'no'}))}
+/* Decision / QA outlets: { yes: stepId | null, no: stepId | null } (stable ids; labels are display only), and review
+   returns: ret = [stepId] (after this rework, the earlier activity is done again). Outlets are NOT dependencies: the
+   target's "Depends on" keeps only its real requirements. Data from 1.6 (schema < 3) mirrored each outlet in the target's
+   deps; that copy is removed once, the outlet stays. Nothing valid is dropped: loops through a decision are kept. */
+function wfBranchNorm(steps,legacy){const by=new Map(steps.map(s=>[s.id,s]));
+  steps.forEach(s=>{const b=s.branches||{},out={yes:null,no:null};
+    if(wfIsDec(s))WF_BR.forEach(([k])=>{const t=b[k]&&by.get(b[k]);if(!t||t.id===s.id||t.retired)return;if(k==='no'&&out.yes===t.id)return;out[k]=t.id;
+      if(legacy)t.deps=t.deps.filter(x=>x!==s.id)});
+    s.branches=out;s.ret=(s.ret||[]).filter(id=>{const t=by.get(id);return t&&t.id!==s.id&&!t.retired})})}
+/* conditional transitions that lead FORWARD to a step: [{d: decision step, b: 'yes'|'no'}] (returns excluded) */
+function wfCondIn(stepId,std){std=std||wfStd();return std.steps.filter(d=>!d.retired&&wfIsDec(d)&&d.branches&&(d.branches.yes===stepId||d.branches.no===stepId)).map(d=>({d,b:d.branches.yes===stepId?'yes':'no'})).filter(x=>!wfIsBack(std,x.d.id,stepId))}
+/* every conditional / return link INTO a step, for drawing: [{from, b: 'yes'|'no'|'ret', back}] */
+function wfLinksIn(stepId,std){std=std||wfStd();const out=[];
+  std.steps.forEach(d=>{if(d.retired)return;if(wfIsDec(d)&&d.branches)WF_BR.forEach(([b])=>{if(d.branches[b]===stepId)out.push({from:d.id,b,back:wfIsBack(std,d.id,stepId)})});
+    if((d.ret||[]).includes(stepId))out.push({from:d.id,b:'ret',back:true})});return out}
+/* does an answer lead back into a new review round (its outlet goes back, or its path reaches a review return to work
+   before the decision)? Then the decision is asked again and the other outlet is still pending, not discarded. */
+function wfBranchLoops(std,d,b){std=std||wfStd();const t=d&&d.branches&&d.branches[b];if(!t)return false;if(wfIsBack(std,d.id,t))return true;
+  return std.steps.some(r=>!r.retired&&(r.ret||[]).length&&(r.id===t||wfReqReaches(std,r.id,t))&&r.ret.some(x=>x===d.id||wfReqReaches(std,d.id,x)))}
+/* the work repeated by a return to `target` decided at `point` (a QA / Decision, or the rework that returns):
+   what needs `target` and is needed by `point` — never earlier work, other branches or unrelated activities */
+function wfLoopScope(std,target,point,inclPoint){std=std||wfStd();return std.steps.filter(x=>!x.retired&&(x.id===target||wfReqReaches(std,x.id,target))&&((inclPoint&&x.id===point)||(x.id!==point&&wfReqReaches(std,point,x.id)))).map(x=>x.id)}
 const wfBranchOf=(d,stepId)=>d&&d.branches?(d.branches.yes===stepId?'yes':d.branches.no===stepId?'no':null):null;
 
 /* ---------- refresh (never creates anything): definitions of the standard flow into the existing records ---------- */
@@ -61,8 +78,8 @@ function wfSyncProject(p){
 function wfApply(){
   const dr=wfDraft(),ids=new Map(dr.steps.map(s=>[s.id,s]));
   dr.steps.forEach(s=>{s.deps=[...new Set(s.deps)].filter(d=>d!==s.id&&ids.has(d)&&!ids.get(d).retired)});
-  for(const s of dr.steps)for(const d of s.deps)if(wfReaches(dr,d,s.id)){toast(`“${s.name}” is part of a loop of dependencies. Remove one “Depends on” link first.`,'err');return}
-  const std={...wfClone(dr),version:(wfStd().version||0)+1,appliedAt:new Date().toISOString(),schema:2};
+  for(const s of dr.steps)for(const d of wfReqPreds(dr,s))if(wfReqReaches(dr,d,s.id)){toast(`“${s.name}” is part of a circular requirement. Remove one “Depends on” link first (loops through a Decision / QA or a review return are fine).`,'err');return}
+  const std={...wfClone(dr),version:(wfStd().version||0)+1,appliedAt:new Date().toISOString(),schema:3};
   S.workflow=std;S.workflowDraft=null;let u=0,n=0;
   S.projects.filter(p=>!p.archived).forEach(p=>{u+=wfSyncProject(p).updated;if(Object.keys(p.wfScope||{}).length&&wfChanges(p).total)n++});
   save();render();toast(`Standard v${std.version} published. No activities were imported${u?`; ${plural(u,'existing task')} renamed`:''}.${n?` ${plural(n,'project')} can review and import the changes from their Workflow tab.`:''}`);
@@ -91,7 +108,7 @@ function wfApplyPlan(p,R,selPhases){
   const now=new Date().toISOString(),log=(t,from,to)=>{t.wfModeLog=[...(t.wfModeLog||[]),{at:now,from,to}];t.wfReview=true};
   const phaseFor=(s,consumers)=>ppFor(p.id,s.phaseId)?s.phaseId:((consumers||[]).map(c=>c.phaseId).find(ph=>ppFor(p.id,ph))||null);
   const mk=(s,mode,consumers)=>{const t=newTask({projectId:p.id,name:wfTaskName(s,mode),phaseId:phaseFor(s,consumers),status:'To Do',priority:'Normal',source:'Planned'});
-    t.assignedToId=null;t.due=null;t.wfStepId=s.id;t.wfExecutionMode=mode;t.wfConsultant='';t.wfOutOfScope=false;t.wfReview=false;t.wfModeLog=[];t.wfAnswer=null;t.wfAnswerLog=[];S.tasks.push(t);return t};
+    t.assignedToId=null;t.due=null;t.wfStepId=s.id;t.wfExecutionMode=mode;t.wfConsultant='';t.wfOutOfScope=false;t.wfReview=false;t.wfModeLog=[];t.wfAnswer=null;t.wfAnswerLog=[];t.wfRound=1;t.wfAttempts=[];S.tasks.push(t);return t};
   R.newInt.forEach(s=>mk(s,'internal'));
   R.newExt.forEach(x=>mk(x.s,'externalInput',x.consumers));
   R.toInt.forEach(({s,t})=>{log(t,'externalInput','internal');t.wfExecutionMode='internal';t.wfOutOfScope=false;t.name=wfTaskName(s,'internal');t.updatedAt=now});
@@ -118,7 +135,7 @@ function wfDepState(pid,ds){
    Off-path steps never block, are not counted as pending work and are not marked done; their data is kept. */
 function wfOffPath(pid,stepId,memo){memo=memo||{};if(stepId in memo)return memo[stepId];memo[stepId]=false;
   const s=wfStep(stepId);if(!s||s.retired)return false;const cin=wfCondIn(stepId);let off=false;
-  if(cin.length)off=cin.every(({d,b})=>{if(wfOffPath(pid,d.id,memo))return true;const a=wfAnswer(pid,d.id);return !!a&&a!==b});
+  if(cin.length)off=cin.every(({d,b})=>{if(wfOffPath(pid,d.id,memo))return true;const a=wfAnswer(pid,d.id);return !!a&&a!==b&&!wfBranchLoops(null,d,a)});
   else{const ds=s.deps.map(d=>wfStep(d)).filter(x=>x&&!x.retired);off=ds.length>0&&ds.every(x=>wfOffPath(pid,x.id,memo))}
   return memo[stepId]=off}
 function wfAnswer(pid,stepId){const t=wfTask(pid,stepId);return t?t.wfAnswer||null:null}
@@ -128,8 +145,8 @@ function wfAvail(t){
   if(wfOffTask(t,memo))return {k:'skip',label:'Not on the chosen path',miss:[]};
   if(!wfIsInt(t))return t.status==='Done'?{k:'received',label:'Received & validated',miss:[]}:{k:'awaiting',label:t.status==='To Do'?'Not requested yet':'Awaiting external input',miss:[]};
   /* requirements: what is off the path does not count; a conditional link is met by the answer that leads here */
-  const miss=s.retired?[]:s.deps.map(d=>wfStep(d)).filter(x=>x&&!x.retired&&!wfOffPath(t.projectId,x.id,memo)).map(x=>{const b=wfBranchOf(x,s.id);
-    if(b){const a=wfAnswer(t.projectId,x.id);return a===b?{s:x,ok:true}:{s:x,t:wfTask(t.projectId,x.id),kind:'decision',ok:false}}return wfDepState(t.projectId,x)}).filter(x=>!x.ok);
+  const miss=s.retired?[]:[...s.deps.map(d=>wfStep(d)).filter(x=>x&&!x.retired&&!wfOffPath(t.projectId,x.id,memo)).map(x=>wfDepState(t.projectId,x)),
+    ...wfCondIn(s.id).filter(({d})=>!wfOffPath(t.projectId,d.id,memo)).map(({d,b})=>wfAnswer(t.projectId,d.id)===b?{s:d,ok:true}:{s:d,t:wfTask(t.projectId,d.id),kind:'decision',ok:false})].filter(x=>!x.ok);
   if(t.status==='Done')return {k:'done',label:'Completed',miss,warn:miss.length?`Completed while requirements are pending: ${wfMissText(miss)}`:''};
   if(t.status!=='To Do')return {k:'doing',label:'In progress',miss,warn:miss.length?`Started before ${miss.map(x=>x.s.name).join(', ')}`:''};
   return miss.length?{k:'blocked',label:'Waiting for requirements',miss}:{k:'ready',label:'Available to start',miss};

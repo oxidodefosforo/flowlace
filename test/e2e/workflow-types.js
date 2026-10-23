@@ -63,14 +63,17 @@ module.exports = async function run() {
     assert.strictEqual(chips[chips.length - 1], 'sv-coordination', 'Coordination last in the specialty selector: ' + chips);
   });
 
-  await step('shapes: Decision amber rhombus, QA violet rhombus with “QA”, Document wavy bottom, Inputs/Outputs parallelograms', async () => {
+  await step('shapes: Decision amber rhombus, QA violet rhombus with “QA”, Document wavy bottom; normal Inputs / Actions / Outputs are rectangles in their colours', async () => {
     const c = await cls('el-dec'); assert.ok(/sh-diamond/.test(c) && /t-decision/.test(c), c);
     const q = await cls('co-qa'); assert.ok(/sh-diamond/.test(q) && /t-qa/.test(q), q);
     assert.strictEqual((await w.textContent('#wfn-co-qa .wfn-qa')).trim(), 'QA', 'QA label');
     const col = await w.evaluate(() => ({ d: getComputedStyle(document.querySelector('#wfn-el-dec .wfn-sh path')).stroke, q: getComputedStyle(document.querySelector('#wfn-co-qa .wfn-sh path')).stroke }));
     assert.ok(/183, 121, 31|240, 180, 76/.test(col.d), 'amber: ' + col.d); assert.ok(/124, 58, 237|183, 148, 246/.test(col.q), 'violet: ' + col.q);
     assert.ok(/sh-doc/.test(await cls('co-in1')) && /C/.test(await w.evaluate(() => document.querySelector('#wfn-co-in1 .wfn-sh path').getAttribute('d'))), 'document: wavy bottom');
-    assert.ok(/sh-para/.test(await cls('me-in1')) && /sh-para/.test(await cls('el-out1')), 'normal Input / Output: parallelogram');
+    assert.ok(/sh-rect/.test(await cls('me-in1')) && /sh-rect/.test(await cls('el-out1')), 'normal Input / Output: rectangle (v1.7)');
+    assert.strictEqual(await w.evaluate(() => document.querySelectorAll('.wfd .wfn.sh-para').length), 0, 'no parallelogram unless Information is chosen');
+    const bc = await w.evaluate(() => ['me-in1', 'el-ac1', 'el-out1'].map(i => getComputedStyle(document.getElementById('wfn-' + i)).borderLeftColor));
+    assert.ok(/14, 138, 126|76, 195, 181/.test(bc[0]) && /31, 95, 173|112, 164, 232/.test(bc[1]) && /122, 77, 184|180, 147, 230/.test(bc[2]), 'teal / blue / violet as before: ' + bc);
     assert.ok(/sh-rect/.test(await cls('el-ac1')), 'normal Action: rectangle');
     const clip = await w.evaluate(() => getComputedStyle(document.getElementById('wfn-el-dec')).clipPath);
     assert.ok(/polygon/.test(clip), 'the clickable area follows the rhombus');
@@ -95,7 +98,7 @@ module.exports = async function run() {
     await clickNode(dec); await w.click('.wfmenu [data-wflay=menu-yes]'); await H.sleep(150);
     assert.ok(/Click the activity that follows/.test(await w.textContent('.wflay-ctx')));
     await clickNode('me-ac2'); await H.saved(w); await H.sleep(200);
-    assert.strictEqual(stepOf(dec).branches.yes, 'me-ac2', 'Yes → Mechanical schematic layout'); assert.ok(stepOf('me-ac2').deps.includes(dec), 'the link is also a requirement of the target');
+    assert.strictEqual(stepOf(dec).branches.yes, 'me-ac2', 'Yes → Mechanical schematic layout'); assert.ok(!stepOf('me-ac2').deps.includes(dec), 'an outlet is not a normal dependency (v1.7)');
     // No → a new activity, from the editor
     await clickNode(dec); await w.click('.wfmenu [data-wflay=menu-details]');
     await H.until(() => w.evaluate(() => !!document.querySelector('#wffloat [data-wfbr=no]')), 3000, 'outlets in the editor');
@@ -104,7 +107,7 @@ module.exports = async function run() {
     await H.until(() => w.evaluate(() => !!document.querySelector('#modal-root form[data-form=wf-newbr]')), 3000, 'new activity form');
     await w.fill('#modal-root input[name=name]', 'Natural ventilation only'); await w.click('#modal-root button.primary'); await H.saved(w); await H.sleep(300);
     const nw = draft().steps.find(s => s.name === 'Natural ventilation only'); assert.ok(nw, 'new activity created on request');
-    assert.strictEqual(stepOf(dec).branches.no, nw.id); assert.ok(nw.deps.includes(dec));
+    assert.strictEqual(stepOf(dec).branches.no, nw.id); assert.ok(!nw.deps.includes(dec), 'outlet kept apart from Depends on');
     assert.ok(!/outlet/.test(await w.textContent('#wfn-' + dec)), 'no pending flag any more');
     await w.keyboard.press('Escape'); await H.sleep(150);
     // a loop is refused

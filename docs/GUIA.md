@@ -190,33 +190,37 @@ En **Settings → Workspace & Storage → Backups** (en Company, solo los admini
 - **Relaciones en sentido contrario:** se conservan y se marcan para revisión. Por ejemplo, una Action que depende de un Output.
 - **Auto layout** aplica las mismas reglas.
 
-**Tipos de actividad.** Además de la categoría (Input, Action, Output: dónde va en el proceso), cada actividad tiene un **Activity type** que define su forma y comportamiento:
+**Tipos de actividad.** La **categoría** (Input, Action, Output) dice dónde va la actividad y da su color: Input verde azulado, Action azul, Output violeta. El **Activity type**, elegido explícitamente, da la forma y el comportamiento:
 
 | Tipo | Forma |
 |---|---|
-| Standard (Action) | rectángulo |
-| Standard (Input / Output) | paralelogramo |
+| Standard | rectángulo (en cualquier categoría) |
+| Information | paralelogramo |
+| Document | rectángulo con el borde inferior ondulado |
 | Decision | rombo ámbar con salidas Yes / No |
 | QA / Approval | rombo violeta con la etiqueta **QA** y salidas Yes / No |
-| Document | rectángulo con el borde inferior ondulado |
 
-- Se elige al crear (selector junto al nombre en la matriz) y se cambia en **Show details**, que muestra una vista previa de la forma. Cambiar el tipo conserva id, nombre, descripción, categoría, fase, especialidad, dependencias, roles, tareas y posición. Si una Decision o QA con salidas pasa a otro tipo, se pregunta antes: conservar esas actividades como dependencias normales o quitar los enlaces.
-- La fila **Types** filtra por tipo, independientemente de especialidad, categoría y fase (y tiene su propia distribución). En **Depends on** hay también un filtro **Activity type**.
-- Las flechas se conectan al contorno de cada forma; los rombos admiten conexiones en sus cuatro lados.
+- La forma nunca se deduce de la categoría, de ser un requisito externo ni del nombre: un Input normal es un rectángulo verde; un Input + Information, un paralelogramo verde; un Action + Information, un paralelogramo azul.
+- Se elige al crear (selector junto al nombre en la matriz) y se cambia en **Show details**, con vista previa de la forma y su color. Cambiar el tipo conserva id, nombre, descripción, categoría, fase, especialidad, dependencias, roles, tareas y posición. Si una Decision o QA con salidas pasa a otro tipo, se pregunta antes: convertir esas salidas en dependencias normales (si no crean un requisito circular) o quitarlas.
+- La fila **Types** filtra por tipo (con su propia distribución). En **Depends on** hay también un filtro **Activity type**.
+- La forma dibujada, el área de clic y los puntos de conexión de las flechas usan el mismo contorno.
 
-**Decision y QA.** Tienen una pregunta y dos salidas, **Yes** y **No**, con identificadores estables (no dependen del texto):
+**Tres tipos de conexión**
 
-- Se configuran en Show details (cada salida: una actividad existente o **＋ New activity…**) o desde el diagrama: menú del bloque → **Set Yes outlet… / Set No outlet…** y clic en la actividad, o **Connect** desde la Decision (pregunta si es Yes, No o una dependencia normal). Yes y No no pueden llevar a la misma actividad; los ciclos se rechazan.
-- Las ramas se ven con su etiqueta (Yes en verde, No en rojo). Si falta una salida, el bloque lo indica; no se crean actividades vacías.
-- El QA usa el mismo sistema; escribe los criterios de revisión en la descripción y asigna al revisor con los roles.
-- En el modelo, la salida queda registrada en la Decision y el enlace también figura en "Depends on" de la actividad destino; quitar esa dependencia deja la salida sin definir (y se avisa).
+- **Dependencia normal** ("Depends on"): un requisito para poder hacer la actividad. Nunca puede ser circular: si Connect detecta un requisito circular, ofrece convertirlo en un retorno de revisión.
+- **Salida condicional** de una Decision o QA (Yes / No) hacia una actividad posterior: continúa según la respuesta. No es una dependencia: no aparece en "Depends on".
+- **Retorno de revisión**: vuelve a trabajo anterior para repetirlo. Puede ser una salida (por ejemplo, QA Sketches / No → Preliminary design sketches) o un enlace de retorno desde un trabajo de corrección (Resolve review comments ↺ Prepare drawings, creado con Connect). Se dibuja discontinuo, por debajo del recorrido principal, con su etiqueta. Un retorno nunca bloquea el trabajo inicial.
 
-**Respuestas en cada proyecto.** El estándar define pregunta, criterios y destinos; cada proyecto registra su respuesta en la tarea (tarjeta del Workflow o panel de la tarea): **Pending**, **Yes** o **No**.
+Se configuran en Show details (salidas y lista de retornos), desde el menú del bloque (**Set Yes / No outlet…**) o con **Connect**. Al seleccionar una flecha: **Clear outlet** o **Remove return**. Los loops se conservan al guardar, publicar, exportar, importar y reiniciar. Los datos de la 1.6 se migran solos: la copia de cada salida que estaba en "Depends on" del destino se quita una vez y la salida se mantiene.
 
-- Empieza en Pending, y una Decision o QA no puede marcarse como Done sin respuesta. Mientras está pendiente, lo que depende de ella espera.
-- Al responder, el camino elegido se resalta y continúa; el otro se atenúa. Las actividades que solo pertenecen a la rama no elegida no bloquean, no cuentan como trabajo pendiente y no se marcan como hechas; conservan sus datos.
-- Una actividad compartida donde las ramas se vuelven a unir aparece una sola vez y solo espera al camino elegido.
-- Cambiar una respuesta muestra qué actividades salen o vuelven al camino; el trabajo hecho, los responsables y el historial se conservan. Cada proyecto tiene sus propias respuestas: no cambian el estándar ni otros proyectos.
+**Respuestas y rondas en cada proyecto.** El estándar define preguntas, criterios, salidas y retornos; cada proyecto registra sus respuestas (tarjeta del Workflow o panel de la tarea): **Pending**, **Yes** o **No**.
+
+- Empieza en Pending; una Decision o QA no puede marcarse Done sin respuesta. Mientras está pendiente, lo que sigue espera; el trabajo anterior puede empezar.
+- Respuesta hacia adelante: el camino elegido continúa y el otro se atenúa (no bloquea, no cuenta como pendiente, no se marca como hecho). Si el camino elegido acaba volviendo a revisión, la continuación aprobada sigue pendiente.
+- **Ronda de revisión:** un No (o Yes) que vuelve a trabajo anterior, o terminar un trabajo con retorno, abre un diálogo con el trabajo que se repetirá: solo lo que va desde el destino del retorno hasta la revisión (se puede desmarcar). Al confirmar se guarda la respuesta con sus observaciones, ese trabajo vuelve a To Do, la revisión vuelve a **Pending** y su número de ronda sube. Cuando se terminan las correcciones, la nueva revisión está disponible; puede volver a ser No (otra ronda) o Yes (continúa).
+- Cada actividad sigue siendo una sola tarea: se conservan responsables, horas, notas, finalizaciones anteriores (en su historial de intentos) y todas las respuestas (R1: No, R2: Yes…). Las rondas no aumentan el número de actividades del avance. Volver a dibujar, guardar o reiniciar nunca abre otra ronda; si cancelas el diálogo de un retorno, puedes hacerlo luego con **↺ Send back for review…**.
+- Los entregables que dependían del trabajo que se repite quedan marcados **Review after rework** (sus datos se conservan).
+- Cada proyecto tiene sus propias respuestas y rondas: no cambian el estándar ni otros proyectos.
 
 **Mover bloques.** Arrastra cualquier bloque: **se mueve solo ese bloque**. Sus predecesoras y sucesoras se quedan donde están y las flechas se adaptan (aunque tengan que ir hacia la izquierda). Las dependencias nunca limitan el movimiento; lo único que lo limita son las zonas (un bloque no entra en una zona anterior, con la separación mínima), y cuando eso ocurre el separador se marca en rojo indicando qué zona termina ahí. Mover nunca cambia dependencias, fase, especialidad, categoría ni estado.
 
@@ -259,6 +263,7 @@ En **Settings → Workspace & Storage → Backups** (en Company, solo los admini
 **Una distribución por vista.** Cada combinación de fase (o All phases) y filtro de especialidades tiene su propia distribución: todas las especialidades, solo Electrical, Electrical + Hydraulics, etc. El orden en que eliges los filtros no importa: Hydraulics + Electrical es la misma vista que Electrical + Hydraulics. Cada vista guarda posiciones, carriles, anchos de zona, recorridos, anclajes, zoom y desplazamiento, y también tiene su propio Undo / Redo.
 
 - **Primera vez con un filtro:** la vista parte de cómo están los bloques visibles en "todas las especialidades", quitando los espacios que ocupaban los ocultos. No se guarda nada hasta que cambias algo, y nunca modifica la vista de todas las especialidades.
+- **Zonas comunes:** en cada fase, Inputs → Actions → Outputs comparten límites en todos los carriles visibles. Si las posiciones guardadas (heredadas de otra vista o de una versión anterior) dejaran una zona empezando antes de que termine la anterior, esa zona y las siguientes se desplazan lo mínimo necesario, conservando la distribución interna y las posiciones verticales; ningún separador atraviesa una tarjeta. Lo mismo en All phases, fase por fase.
 - **Sin barreras invisibles:** las actividades ocultas no reservan espacio, no limitan los movimientos ni agrandan el lienzo. Las dependencias con ellas siguen en los datos.
 - **El espacio entre zonas no es un muro:** aunque hayas ensanchado un separador (o Fit zones lo haya fijado), un bloque puede acercarse a la zona anterior hasta la separación mínima; ese espacio se reduce solo. Lo único que limita el movimiento es lo que se ve: lo que la actividad necesita (a su izquierda) y los bloques de la zona anterior, a la separación mínima.
 - **Independientes:** cambiar Electrical no toca "todas las especialidades", y al revés. Auto layout, Fit zones y los separadores afectan solo a la vista activa.
@@ -346,6 +351,7 @@ Se ejecutó todo en Linux (Ubuntu 24.04) con Electron 43.7.7 real, en pantalla v
 | All phases, pantalla completa y lienzo (13 comprobaciones, con Fee → Sketch → Design Development → Tender Issue): orden de fases, encabezados y colores, zonas por fase y carriles alineados; dependencias entre fases entre bloques reales, sin duplicados, y referencias solo para lo filtrado; distribución y zoom propios de cada vista; pantalla completa que cubre la ventana con sus controles; mover, segmentos, anclajes, separadores, Add prerequisites, Show details y Auto layout dentro de ella; Esc en dos pasos conservando selección, cambios y posición, sin publicar; sin franja blanca al 100 %, 60 % y 40 %; área desplazable que sigue al zoom, a Fit to view y al tamaño de la ventana; flechas y puntos de paso seleccionables al 70 % y un quiebre bajo el último carril incluido; proyecto con All phases sin crear tareas; reinicio y datos íntegros | 13/13 ✓ |
 | Vistas y actividades nuevas (12 comprobaciones): agregar una actividad con bloques ordenados a mano sin mover ninguno (posiciones en pantalla, carriles, separadores y recorridos), en un hueco de su carril y zona y sin superposiciones; vistas que la incluyen o la excluyen; Locate new activity sin saltos de vista; con solo Electrical, mover un bloque por el espacio que usaban las especialidades ocultas y lienzo más estrecho; volver a todas las especialidades sin cambios; Electrical conserva sus ajustes; Electrical + Hydraulics = Hydraulics + Electrical; cambio de especialidad que pasa el bloque de una vista a otra; Auto layout solo en la vista activa, con Undo; con solo Mechanical y el espacio Inputs | Actions ensanchado, una Action vuelve hasta la separación mínima; reinicio con todas las vistas y su zoom; datos íntegros | 12/12 ✓ |
 | Tipos, Decision / QA y selección (12 comprobaciones): datos anteriores con tipo por defecto y Fire encima de Coordination; formas (rombo ámbar, rombo violeta con QA, documento ondulado, paralelogramos) con flechas en el contorno; salidas Yes / No etiquetadas, desde el menú y a una actividad nueva, pendientes señaladas, Yes = No rechazado; cambio de tipo que conserva todo y pregunta por las salidas; filtro por tipo; A no arrastra a C y B no bloquea a A; A + C juntas con B fija; A + B + C con rectángulo; Esc y una sola Undo; Move with successors con resaltado previo; sin muros por dependencias en una vista filtrada; Pan y Espacio; respuestas por proyecto (Pending bloquea, No / Yes, rama no elegida atenuada y fuera del total, unión compartida, cambio de respuesta con lista y datos conservados, QA con su resultado), otro proyecto y estándar intactos; reinicio | 12/12 ✓ |
+| Loops, formas y zonas (8 comprobaciones): Input / Action / Output normales como rectángulos con sus colores; paralelogramo solo con Information (también en Action, azul) y cambio de tipo que conserva todo; QA / No hacia trabajo anterior y retorno desde una corrección, dibujados como retornos, conservados al publicar, exportar, importar y reiniciar; Connect ofrece retorno en lugar de dependencia circular; rondas por proyecto (trabajo inicial antes del QA, alcance propuesto, observaciones, Pending de nuevo, misma tarea con historial, responsable y horas, sin rondas extra al redibujar o reiniciar, Yes habilita la continuación correcta); rework con retorno (repite dibujo y QA, nada anterior); Hydraulics + Fire, todas las especialidades y All phases sin separadores sobre tarjetas; filtros que restauran su distribución; sin muros por actividades ocultas; Auto layout con loops termina; retornos editables | 8/8 ✓ |
 | Paquete de servidor: `node.exe` de Windows ejecutado con Wine (init, serve, login, commit, backup) | ✓ |
 
 **Compilación de Windows:** `FlowlaceSetup.exe` (Squirrel), el zip portátil y el paquete de Flowlace Server se generaron en Linux con Wine y Mono. Se verificó que `Flowlace.exe` lleva el icono, el nombre y los metadatos.

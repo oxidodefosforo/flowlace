@@ -104,7 +104,7 @@ const WF_COLS=[['input','Inputs'],['action','Actions'],['output','Outputs']];
 const WF_CAT={input:'Input',action:'Action',output:'Output'};
 const WF_SPEC_NAMES=['Electrical','Mechanical','Hydraulics','Fire','Coordination'];
 /* activity type = shape and behaviour, independent of the category (where it belongs: Input / Action / Output) */
-const WF_TYPES=[['normal','Standard'],['decision','Decision'],['qa','QA / Approval'],['document','Document']];
+const WF_TYPES=[['normal','Standard'],['info','Information'],['document','Document'],['decision','Decision'],['qa','QA / Approval']];
 const WF_TYPE=Object.fromEntries(WF_TYPES);
 const wfType=s=>s&&WF_TYPE[s.type]?s.type:'normal';
 const wfIsDec=s=>{const t=wfType(s);return t==='decision'||t==='qa'};
@@ -125,5 +125,13 @@ function wfSpecs(std){const all=S.services.map(s=>s.id),byN=n=>(S.services.find(
 function wfPhaseSteps(std,phaseId,retired){return std.steps.filter(s=>s.phaseId===phaseId&&!!s.retired===!!retired).sort((a,b)=>WF_COLS.findIndex(c=>c[0]===a.cat)-WF_COLS.findIndex(c=>c[0]===b.cat)||a.order-b.order)}
 function wfColSteps(std,phaseId,cat,specs){return std.steps.filter(s=>s.phaseId===phaseId&&!s.retired&&s.cat===cat&&(!specs||specs.includes(wfSpecOf(s)))).sort((a,b)=>a.order-b.order)}
 function wfReaches(std,from,target,seen=new Set()){if(from===target)return true;if(seen.has(from))return false;seen.add(from);const s=wfStep(from,std);return !!s&&s.deps.some(d=>wfReaches(std,d,target,seen))}
-function wfCycle(std,stepId,depId){return stepId===depId||wfReaches(std,depId,stepId)}
+function wfCycle(std,stepId,depId){return stepId===depId||wfReqReaches(std,depId,stepId)}
+/* three kinds of connection:
+   - normal dependency (deps): a requirement to run an activity; never circular;
+   - conditional transition (Decision / QA outlet to an activity AFTER it): runs after that answer;
+   - review return (a No outlet to earlier work, or a "return" link from rework back to earlier work): the work is
+     repeated. Returns never count as requirements, so a loop never blocks the initial work. */
+function wfIsBack(std,decId,tid){return wfReaches(std,decId,tid)}   // the decision already needs that activity: going there is a return
+function wfReqPreds(std,s){const out=new Set(s.deps);(std||wfStd()).steps.forEach(d=>{if(d.retired||!wfIsDec(d)||!d.branches)return;['yes','no'].forEach(b=>{if(d.branches[b]===s.id&&!wfIsBack(std,d.id,s.id))out.add(d.id)})});return [...out]}
+function wfReqReaches(std,from,target,seen=new Set()){if(from===target)return true;if(seen.has(from))return false;seen.add(from);const s=wfStep(from,std);return !!s&&wfReqPreds(std,s).some(d=>wfReqReaches(std,d,target,seen))}
 

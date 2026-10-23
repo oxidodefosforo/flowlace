@@ -291,8 +291,12 @@ module.exports = async function run() {
     assert.ok(/already depends/.test(await w.textContent('#toasts')), 'duplicate refused');
     // loop
     await w.click('[data-wflay=conn]'); await w.click('#wfn-el-out1'); await w.click('#wfn-el-ac1'); await H.sleep(250);
-    assert.ok(/loop/.test(await w.textContent('#toasts')), 'loop refused with an explanation');
-    assert.ok(!rec(records(dbFile), 'workflowDraft').steps.find(s => s.id === 'el-ac1').deps.includes('el-out1'));
+    /* v1.7: a circular requirement is never added; it is offered as a review return instead (cancelled here) */
+    await H.until(() => w.evaluate(() => /Add a review return\?/.test(document.getElementById('modal-root').textContent)), 3000, 'explained, return offered');
+    assert.ok(/already comes before/.test(await w.textContent('#modal-root')), 'with the reason');
+    await w.click('#modal-root [data-act=cf-no]'); await H.sleep(200);
+    assert.ok(!rec(records(dbFile), 'workflowDraft').steps.find(s => s.id === 'el-ac1').deps.includes('el-out1'), 'no circular dependency');
+    assert.ok(!(rec(records(dbFile), 'workflowDraft').steps.find(s => s.id === 'el-out1').ret || []).length, 'cancelled: no return either');
     // drag from the connection point of a block, then cancel the confirmation
     await w.click('[data-wflay=edit]');
     await w.hover('#wfn-co-in1'); const dot = await center('#wfn-co-in1 .wfconn');

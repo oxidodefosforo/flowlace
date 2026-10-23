@@ -9,7 +9,7 @@ function wfDPResults(s,ed){
   return ed.steps.filter(x=>!x.retired&&(!q||(x.name+' '+(x.desc||'')).toLowerCase().includes(q))&&(!st.types.length||st.types.includes(x.cat))&&(!(st.atypes||[]).length||st.atypes.includes(wfType(x)))&&(!st.svcs.length||st.svcs.includes(wfSpecOf(x)))&&(!st.phases.length||st.phases.includes(x.phaseId)))
     .sort((a,b)=>S.phases.findIndex(p=>p.id===a.phaseId)-S.phases.findIndex(p=>p.id===b.phaseId)||order.indexOf(wfSpecOf(a))-order.indexOf(wfSpecOf(b))||WF_COLS.findIndex(c=>c[0]===a.cat)-WF_COLS.findIndex(c=>c[0]===b.cat)||a.order-b.order);
 }
-function wfDPWhy(s,x,ed){if(x.id===s.id)return 'An activity can’t depend on itself';if(!s.deps.includes(x.id)&&wfCycle(ed,s.id,x.id))return `Not possible: “${x.name}” already depends on “${s.name}” (it would create a loop)`;return ''}
+function wfDPWhy(s,x,ed){if(x.id===s.id)return 'An activity can’t depend on itself';if(!s.deps.includes(x.id)&&wfCycle(ed,s.id,x.id))return `Not possible: “${x.name}” already depends on “${s.name}” (a circular requirement, a loop — to send work back for review, use Connect: review return)`;return ''}
 const wfDPMeta=x=>`${WF_CAT[x.cat]}${wfType(x)!=='normal'?' · '+WF_TYPE[wfType(x)]:''} · ${esc(wfSpecName(wfSpecOf(x)))} · ${esc(phName(x.phaseId))}`;
 function wfDPList(s,ed){
   const res=wfDPResults(s,ed);

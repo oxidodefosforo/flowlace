@@ -343,3 +343,15 @@ body:has(.wfdia.fs) #main{overflow:hidden}
 .wfn.mv-sel{outline:2.5px solid var(--accent);outline-offset:2px}.wfn.mv-auto{outline:2px dashed var(--wf-dec);outline-offset:2px}
 .wfn.sh-diamond .wfn-s{display:none}
 .wfn.sh-para .wfconn{right:5px}
+/* v1.7 · the category gives the colour, the activity type gives the shape */
+.wfshi.c-input path{stroke:var(--wf-in)}.wfshi.c-action path{stroke:var(--wf-ac)}.wfshi.c-output path{stroke:var(--wf-out)}
+.wfshi.sh-para.c-action path{stroke:var(--wf-ac)}
+.wfshi.t-decision path{stroke:var(--wf-dec)}.wfshi.t-qa path{stroke:var(--wf-qa)}
+.wfn.sh-para .wfn-sh path{fill:color-mix(in srgb,var(--c) 6%,var(--surface))}
+/* review returns: dashed, around the main path, with their label */
+.wfe.back{stroke-dasharray:7 4}.wfe.br-ret{stroke:var(--wf-qa);stroke-width:1.8}.wfe-hr{fill:var(--wf-qa)}
+.wfbl.br-ret rect{stroke:var(--wf-qa)}.wfbl.br-ret text{fill:var(--wf-qa)}
+.wfans-h{display:flex;flex-wrap:wrap;gap:3px;width:100%}.wfans-h .chip.ans-no{border-color:var(--wf-no);color:var(--wf-no)}.wfans-h .chip.ans-yes{border-color:var(--wf-yes);color:var(--wf-yes)}
+.wfscope{border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:8px 0;display:flex;flex-direction:column;gap:3px;max-height:40vh;overflow:auto}
+.wfscope legend{font-size:12px;color:var(--fg-2);padding:0 4px}
+.wfret-l{display:flex;flex-wrap:wrap;gap:4px}

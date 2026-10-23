@@ -46,6 +46,23 @@ module.exports = function makeFixture(dir, opts = {}) {
     d.workflow.steps.find(x => x.id === 'co-in1').type = 'document';
     d.workflow.steps.forEach((x, i) => { x.order = i; });
   }
+  if (opts.loops) {   // v1.7: review loops (QA No back to earlier work; a rework with a return) and zones of several lanes
+    const add = (...a) => d.workflow.steps.push(st(...a)), last = () => d.workflow.steps[d.workflow.steps.length - 1];
+    add('me-sk', 'ph-sd', M, 'action', 'Preliminary design sketches', ['me-in1'], ['ro-dft']);
+    add('me-qa', 'ph-sd', M, 'action', 'QA Sketches', ['me-sk'], ['ro-qa']); Object.assign(last(), { type: 'qa', question: 'Are the sketches approved?', desc: 'Criteria: scale, grid, services zones.', branches: { yes: 'me-pl', no: 'me-sk' } });
+    add('me-pl', 'ph-sd', M, 'output', 'Preliminary layouts and schematics', [], ['ro-eng']);
+    add('el-pd', 'ph-sd', E, 'action', 'Prepare drawings', ['el-ac1'], ['ro-dft']);
+    add('el-qa2', 'ph-sd', E, 'action', 'Drawings QA', ['el-pd'], ['ro-qa']); Object.assign(last(), { type: 'qa', question: 'QA: are the drawings approved?', branches: { yes: 'el-iss', no: 'el-rr' } });
+    add('el-rr', 'ph-sd', E, 'action', 'Resolve review comments', [], ['ro-dft']); Object.assign(last(), { ret: ['el-pd'] });
+    add('el-iss', 'ph-sd', E, 'output', 'Issue drawings', [], ['ro-seng']);
+    add('hy-ftr', 'ph-sd', Hy, 'input', 'Flow Test Report', [], ['ro-eng']); Object.assign(last(), { type: 'document' });
+    add('fi-ds', 'ph-sd', 'sv-fire', 'action', 'Define Systems', ['hy-ftr'], ['ro-eng']);
+    add('fi-in', 'ph-sd', 'sv-fire', 'input', 'Fire engineering brief', [], ['ro-eng']); Object.assign(last(), { type: 'info' });
+    d.workflow.steps.forEach((x, i) => { x.order = i; });
+    /* layouts saved by hand with positions that do not fit together: a Hydraulics Input to the right of a Fire Action */
+    d.workflow.layout = { 'ph-sd': { n: { 'hy-ftr': { x: 640, dy: 10 }, 'fi-ds': { x: 520, dy: 10 }, 'fi-in': { x: 126, dy: 10 } }, l: {}, e: {} },
+      'ph-sd~sv-fire+sv-hydraulics': { n: { 'hy-ftr': { x: 700, dy: 10 }, 'fi-ds': { x: 560, dy: 10 }, 'fi-in': { x: 300, dy: 10 }, 'hy-ac1': { x: 900, dy: 10 }, 'hy-out1': { x: 1200, dy: 10 } }, l: {}, e: {} } };
+  }
   if (opts.phases) {   // the flow continues in Design Development and Tender Issue (for All phases)
     d.workflow.steps.push(
       st('co-dd-in1', 'ph-dd', C, 'input', 'Coordinated architectural model', ['co-ac1'], ['ro-bimc']),

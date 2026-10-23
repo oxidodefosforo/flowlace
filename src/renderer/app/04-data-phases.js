@@ -113,6 +113,7 @@ function setTaskField(t,f,v){
   /* a Decision / QA is completed with its answer */
   if(f==='status'&&v==='Done'&&t.status!=='Done'&&typeof wfStep==='function'&&t.wfStepId){const s=wfStep(t.wfStepId);if(s&&wfIsDec(s)&&!t.wfAnswer&&wfIsInt(t)){toast(`“${s.name}” needs an answer (Yes or No) before it can be completed.`,'err');return false}}
   if(f==='status'){if(v==='Done'&&t.status!=='Done')t.completedAt=new Date().toISOString();else if(v!=='Done')t.completedAt=null}
+  if(f==='status'&&v==='Done'&&t.status!=='Done'&&typeof wfOnDone==='function'&&t.wfStepId)setTimeout(()=>wfOnDone(t),0);   // rework with a review return: asked once
   if(f==='deliverableId'){v=v||null;if(v){const d=deliv(v);if(!d||d.projectId!==t.projectId)return false;t.phaseId=null}else if(t.deliverableId){t.phaseId=deliv(t.deliverableId)?.phaseId||null}}
   if(f==='phaseId'&&v&&(t.deliverableId||!ppFor(t.projectId,v)))return false;
   if(f==='projectId'&&v!==t.projectId){if(t.deliverableId)t.phaseId=deliv(t.deliverableId)?.phaseId||null;t.deliverableId=null;if(t.phaseId&&!ppFor(v,t.phaseId))t.phaseId=null}

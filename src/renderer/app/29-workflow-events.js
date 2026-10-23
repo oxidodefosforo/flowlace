@@ -79,7 +79,8 @@ async function wfChangeType(id,v,el){const dr=wfDraft(),s=wfStep(id,dr);if(!s||!
   if(was&&!will&&tg.length){mode=await choiceBox('Change the activity type?',`“${esc(s.name)}” has outlets: ${tg.map(x=>`<b>${esc(x.name)}</b> (${b.yes===x.id?'Yes':'No'})`).join(', ')}.<br>A ${esc(WF_TYPE[v])} has no Yes / No. Keep those activities as normal dependencies (they will always be needed), or remove the links?`,[{v:'keep',l:'Keep as dependencies',c:'primary'},{v:'drop',l:'Remove the links'}]);
     if(!mode){if(el)el.value=wfType(s);return}}
   wfHistDeps(s.phaseId);
-  wfMutate(d=>{const x=wfStep(id,d);if(mode==='drop')tg.forEach(t=>{const y=wfStep(t.id,d);if(y)y.deps=y.deps.filter(z=>z!==id)});if(!will)x.branches={yes:null,no:null};else x.branches=x.branches||{yes:null,no:null};x.type=v});
+  let skipped=[];wfMutate(d=>{const x=wfStep(id,d);if(!will){if(mode==='keep')tg.forEach(t=>{const y=wfStep(t.id,d);if(!y||y.deps.includes(id))return;if(wfReqReaches(d,id,y.id)){skipped.push(y.name);return}y.deps.push(id)});x.branches={yes:null,no:null}}else x.branches=x.branches||{yes:null,no:null};x.type=v});
+  if(skipped.length)toast(`Not kept as dependencies (they come before it, so it would be circular): ${skipped.join(', ')}.`,'err');
   toast(`“${s.name}” is now ${WF_TYPE[v]}.${was&&!will&&tg.length?(mode==='keep'?' Its outlets are now normal dependencies.':' Its outlet links were removed.'):''}${will&&!was?' Set its Yes and No outlets.':''}`);
   const f=document.getElementById(el&&el.id);f&&f.focus({preventScroll:true})}
 /* an outlet to a new activity: asked explicitly (nothing empty is created) */
@@ -99,12 +100,54 @@ document.addEventListener('submit',e=>{const f=e.target;if(f.dataset.form!=='wf-
   toast(`“${name}” created: ${b==='yes'?'Yes':'No'} of “${d.name}”.`);if(id&&document.getElementById('wfn-'+id)&&!wfInView(id)){ui.wfLocate=id;wfRerender()}},true);
 /* a project answer: Pending / Yes / No. Changing it shows what changes path; nothing done, assigned or logged is lost */
 function wfOffSet(pid){const memo={};return new Set(S.tasks.filter(t=>t.projectId===pid&&t.wfStepId&&wfLive(t)&&wfOffTask(t,memo)).map(t=>t.id))}
+/* ---------- review rounds (per project; one task per activity, rounds and earlier completions kept on it) ---------- */
+const wfWho=()=>typeof SY!=='undefined'&&SY.user?SY.user.id||null:null;
+function wfReopen(t,why){const now=new Date().toISOString();t.wfAttempts=[...(t.wfAttempts||[]),{at:now,round:t.wfRound||1,status:t.status,completedAt:t.completedAt||null,answer:t.wfAnswer||null,why,by:wfWho()}];
+  t.status='To Do';t.completedAt=null;t.wfRound=(t.wfRound||1)+1;if(t.wfAnswer)t.wfAnswer=null;t.updatedAt=now}
+/* which work is repeated: proposed from the connections (between the return target and the review point), adjustable */
+function wfScopeBox(title,msg,tasks,note){return new Promise(res=>{if(confirmResolve){const r=confirmResolve;confirmResolve=null;r(false)}
+  openModal(`<div class="m-head"><div><h2>${title}</h2></div></div><div class="cmsg">${msg}</div>
+    ${tasks.length?`<fieldset class="wfscope"><legend>Work to do again (one more round each; history, people and hours are kept)</legend>${tasks.map(t=>`<label class="chk"><input type="checkbox" data-wfscope value="${t.id}" checked> <span>${esc(t.name)} <small class="muted">${esc(t.status)}${t.assignedToId?' · '+esc(pname(t.assignedToId)):''}${t.wfRound>1?' · round '+t.wfRound:''}</small></span></label>`).join('')}</fieldset>`:''}
+    ${note?`<label class="cp-in"><span>Review comments <i>optional</i></span><textarea class="in" rows="2" name="wfscope-note" placeholder="What needs to change"></textarea></label>`:''}
+    <div class="m-actions"><button class="btn ghost" data-act="cf-no">Cancel</button><button class="btn primary" data-wfscope-ok>Start the new round</button></div>`,{focus:'[data-wfscope-ok]'});
+  confirmResolve=r=>res(r||null)})}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-wfscope-ok]');if(!b)return;e.preventDefault();const m=b.closest('.modal');
+  const ids=[...m.querySelectorAll('[data-wfscope]:checked')].map(x=>x.value),n=m.querySelector('[name=wfscope-note]'),r=confirmResolve;confirmResolve=null;modalRoot.innerHTML='';r&&r({ids,note:n?n.value.trim():''})},true);
+/* deliverables that relied on an earlier approval: flagged for review (their data and versions are kept) */
+function wfFlagDelivs(pid,taskIds,src){const now=new Date().toISOString(),hit=S.deliverables.filter(d=>d.projectId===pid&&(d.reqTaskIds||[]).some(id=>taskIds.includes(id)));
+  hit.forEach(d=>{d.wfRework={at:now,by:src};d.updatedAt=now});return hit}
+const wfTasksOf=(pid,ids)=>ids.map(id=>wfTask(pid,id)).filter(x=>x&&wfIsInt(x)&&wfLive(x));
+/* a project answer: Pending / Yes / No. A No (or Yes) that goes back to earlier work starts a review round */
 async function wfSetAnswer(tid,v){const t=S.tasks.find(x=>x.id===tid);if(!t)return;const s=wfStep(t.wfStepId);if(!s||!wfIsDec(s))return;const nv=v==='yes'||v==='no'?v:null;if((t.wfAnswer||null)===nv)return;
-  const before=wfOffSet(t.projectId),old=t.wfAnswer;t.wfAnswer=nv;const after=wfOffSet(t.projectId);t.wfAnswer=old;
+  const std=wfStd(),tgt=nv&&s.branches?s.branches[nv]:null,old=t.wfAnswer||null,now=new Date().toISOString(),label=nv==='yes'?'Yes':nv==='no'?'No':'Pending';
+  if(tgt&&wfIsBack(std,s.id,tgt)){
+    const T=wfStep(tgt),scope=wfTasksOf(t.projectId,wfLoopScope(std,tgt,s.id,false)),ds=S.deliverables.filter(d=>d.projectId===t.projectId&&(d.reqTaskIds||[]).some(id=>scope.some(x=>x.id===id)||id===t.id));
+    const r=await wfScopeBox(`${wfType(s)==='qa'?'QA':'Decision'}: ${label} — back to “${esc(T.name)}”`,`“${esc(s.name)}” is answered <b>${label}</b> in round ${t.wfRound||1}. The work from “${esc(T.name)}” up to this review is done again; then this review starts again as <b>Pending</b>. What is approved is not continued yet.${ds.length?`<br><b>Deliverables to review</b> (they relied on this work): ${ds.map(d=>esc(d.name)).join(', ')}.`:''}`,scope,true);
+    if(!r)return;
+    t.wfAnswerLog=[...(t.wfAnswerLog||[]),{at:now,from:old,to:nv,round:t.wfRound||1,note:r.note||'',back:tgt,by:wfWho()}];t.wfAnswer=nv;
+    const sel=scope.filter(x=>r.ids.includes(x.id));sel.forEach(x=>wfReopen(x,`${s.name}: ${label} (round ${t.wfRound||1})`));
+    wfReopen(t,`${label} — new review round`);const fl=wfFlagDelivs(t.projectId,[...sel.map(x=>x.id),t.id],t.id);
+    save();render();toast(`${s.name}: ${label}. ${plural(sel.length,'activity','activities')} to do again; the review is Pending for round ${t.wfRound}.${fl.length?` ${plural(fl.length,'deliverable')} to review.`:''}`);return}
+  /* forward: the chosen path continues; a target done in an earlier round is worked again (a new round needs new work) */
+  const before=wfOffSet(t.projectId);t.wfAnswer=nv;const after=wfOffSet(t.projectId);t.wfAnswer=old;
   const leave=[...after].filter(x=>!before.has(x)).map(x=>S.tasks.find(y=>y.id===x)),back=[...before].filter(x=>!after.has(x)).map(x=>S.tasks.find(y=>y.id===x));
+  const tt=tgt&&wfTask(t.projectId,tgt),again=tt&&wfIsInt(tt)&&tt.status==='Done'&&(t.wfRound||1)>1?tt:null;
   const nm=x=>`<li>${esc(x.name)}${x.status!=='To Do'?` <span class="muted">(${esc(x.status)}${x.assignedToId?' · '+esc(pname(x.assignedToId)):''})</span>`:''}</li>`;
-  if(old&&(leave.length||back.length)){const ok=await confirmBox('Change the answer?',`“${esc(s.name)}”: ${old==='yes'?'Yes':'No'} → ${nv==='yes'?'Yes':nv==='no'?'No':'Pending'}.${leave.length?`<br><b>Leave the chosen path</b> (kept as they are, not counted as pending):<ul class="mini-list">${leave.map(nm).join('')}</ul>`:''}${back.length?`<b>Back on the path</b>:<ul class="mini-list">${back.map(nm).join('')}</ul>`:''}Work done, responsibles and history are kept.`,'Change answer');if(!ok)return}
-  const now=new Date().toISOString();t.wfAnswerLog=[...(t.wfAnswerLog||[]),{at:now,from:old||null,to:nv,by:typeof SY!=='undefined'&&SY.user?SY.user.id||null:null}];t.wfAnswer=nv;t.updatedAt=now;
+  if((old&&(leave.length||back.length))||again){const ok=await confirmBox(old?'Change the answer?':'Record the answer?',`“${esc(s.name)}”: ${old?(old==='yes'?'Yes':'No')+' → ':''}${label}.${leave.length?`<br><b>Leave the chosen path</b> (kept as they are, not counted as pending):<ul class="mini-list">${leave.map(nm).join('')}</ul>`:''}${back.length?`<b>Back on the path</b>:<ul class="mini-list">${back.map(nm).join('')}</ul>`:''}${again?`<b>Done again in this round</b>:<ul class="mini-list">${nm(again)}</ul>`:''}Work done, responsibles and history are kept.`,old?'Change answer':'Record answer');if(!ok)return}
+  t.wfAnswerLog=[...(t.wfAnswerLog||[]),{at:now,from:old,to:nv,round:t.wfRound||1,by:wfWho()}];t.wfAnswer=nv;t.updatedAt=now;
+  if(again)wfReopen(again,`${s.name}: ${label} (round ${t.wfRound})`);
   if(!nv&&t.status==='Done'){t.status='In progress';t.completedAt=null;toast(`“${s.name}” is back in progress: a Decision / QA is completed with its answer.`)}
-  save();render();toast(`${s.name}: ${nv==='yes'?'Yes':nv==='no'?'No':'Pending'}${leave.length?` · ${plural(leave.length,'activity','activities')} not on the chosen path`:''}`)}
+  save();render();toast(`${s.name}: ${label}${leave.length?` · ${plural(leave.length,'activity','activities')} not on the chosen path`:''}`)}
+/* rework with a review return, once done: the earlier work and the review are repeated (asked once per completion) */
+async function wfOnDone(t,force){if(!t||t.status!=='Done'||!t.wfStepId||!wfIsInt(t))return;const s=wfStep(t.wfStepId);if(!s||!(s.ret||[]).length)return;if(!force&&t.wfRetFor&&t.wfRetFor===t.completedAt)return;
+  const std=wfStd(),ids=[...new Set(s.ret.flatMap(r=>wfLoopScope(std,r,s.id,false)))],scope=wfTasksOf(t.projectId,ids);
+  const names=s.ret.map(r=>wfStep(r)).filter(Boolean).map(x=>`“${esc(x.name)}”`).join(', ');
+  const r=await wfScopeBox(`Back to ${names}?`,`“${esc(s.name)}” is done. Its review return sends the work back to ${names}; the review after it starts again as <b>Pending</b>.`,scope,false);
+  t.wfRetFor=t.completedAt;if(!r){save();render();toast('Not sent back. You can do it later from the activity (“Send back for review…”).');return}
+  const sel=scope.filter(x=>r.ids.includes(x.id));sel.forEach(x=>wfReopen(x,`Return from ${s.name}`));const fl=wfFlagDelivs(t.projectId,sel.map(x=>x.id),t.id);
+  save();render();toast(`${plural(sel.length,'activity','activities')} to do again after “${s.name}”.${fl.length?` ${plural(fl.length,'deliverable')} to review.`:''}`)}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-wfsendback],[data-wfretrm],[data-wfdrw]');if(!b)return;e.preventDefault();e.stopPropagation();
+  if(b.dataset.wfsendback){const t=S.tasks.find(x=>x.id===b.dataset.wfsendback);if(t){t.wfRetFor=null;wfOnDone(t,true)}return}
+  if(b.dataset.wfdrw){const d=deliv(b.dataset.wfdrw);if(d){delete d.wfRework;d.updatedAt=new Date().toISOString();save();render()}return}
+  const dr=wfDraft(),x=wfStep(b.dataset.wfretrm,dr);if(!x)return;wfHistDeps(x.phaseId);wfMutate(()=>{x.ret=(x.ret||[]).filter(y=>y!==b.dataset.v)});toast('Return removed.')},true);
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-wfans]');if(!b)return;e.preventDefault();e.stopPropagation();wfSetAnswer(b.dataset.tid,b.dataset.wfans)},true);
