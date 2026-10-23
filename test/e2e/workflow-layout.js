@@ -84,27 +84,20 @@ module.exports = async function run() {
     await H.shot(w, 'layout-1-vertical');
   });
 
-  await step('2 · moving “Preliminary equipment load” moves the activities to its right; it stops at the nearest valid position', async () => {
+  await step('2 · moving “Preliminary equipment load” moves only that activity (v1.6); only the zones limit it, never its dependencies', async () => {
     const b0 = await all(IDS);
-    const set = ['me-out1', 'me-ac2', 'me-out2', 'el-ac2', 'el-out1', 'co-ac1'], still = ['me-in1', 'el-ac1', 'co-in1', 'hy-ac1', 'fee-co-out'];
+    const others = IDS.filter(i => i !== 'me-out1');
     await drag('me-out1', 150, 0);
     const b1 = await all(IDS), dx = b1['me-out1'].x - b0['me-out1'].x;
     assert.ok(dx > 120, 'moved right: ' + dx);
-    for (const id of set) assert.strictEqual(b1[id].x - b0[id].x, dx, id + ' moved with it');
-    for (const id of still) assert.strictEqual(b1[id].x, b0[id].x, id + ' stayed');
-    await drag('me-out1', -420, 0);
+    for (const id of others) assert.strictEqual(b1[id].x, b0[id].x, id + ' stayed (successors do not follow by default)');
+    await drag('me-out1', -900, 0);
     const b2 = await all(IDS), inputsEnd = Math.max(b2['me-in1'].x, b2['co-in1'].x, b2['fee-co-out'].x) + W;
-    assert.ok(b2['me-out1'].x < b1['me-out1'].x, 'moved back left');
-    /* it stopped at the nearest valid position: one constraint is exactly tight (a dependency gap or the Inputs zone) */
-    const steps0 = rec(records(dbFile), 'workflowDraft').steps, inSet = new Set(set);
-    const tight = steps0.some(st => inSet.has(st.id) && st.deps.some(d => !inSet.has(d) && b2[d] && b2[st.id].x === b2[d].x + W + GAP)) || b2['me-out1'].x === inputsEnd + 84;
-    assert.ok(tight, 'a dependency or the zone limit stopped it');
-    for (const st of steps0) for (const d of st.deps) if (b2[st.id] && b2[d]) assert.ok(b2[st.id].x >= b2[d].x + W + GAP - 1, `${d} → ${st.id} order kept`);
-    for (const id of set) assert.strictEqual(b2[id].x - b1[id].x, b2['me-out1'].x - b1['me-out1'].x, id + ' moved back with it');
+    assert.ok(b2['me-out1'].x < b0['me-out1'].x, 'moved back left, past its old place');
+    assert.ok(b2['me-out1'].x >= inputsEnd + 40 - 1 && b2['me-out1'].x <= inputsEnd + 40 + 8, 'stopped only by the Inputs zone (minimum space): ' + (b2['me-out1'].x - inputsEnd));
+    for (const id of others) assert.strictEqual(b2[id].x, b0[id].x, id + ' still in place');
     await drag('me-out1', 60, 0);
     const b3 = await all(IDS);
-    const steps = rec(records(dbFile), 'workflow').steps;
-    for (const s of steps) for (const d of s.deps) if (b3[s.id] && b3[d] && !(s.cat === 'input' && false)) assert.ok(b3[s.id].x >= b3[d].x + W + GAP - 1, `${d} → ${s.id} order kept`);
     assert.ok(!Number.isInteger((b3['me-out1'].x - 126) / 254), 'intermediate position between automatic columns');
     afterH = b3;
     await H.shot(w, 'layout-2-horizontal');
@@ -113,7 +106,7 @@ module.exports = async function run() {
   await step('5 · undo and redo restore the whole movement (all moved blocks at once)', async () => {
     await w.click('[data-wflay=undo]'); await H.sleep(200);
     const u1 = await all(IDS);
-    for (const id of ['me-out1', 'me-ac2', 'el-ac2', 'co-ac1']) assert.notStrictEqual(u1[id].x, afterH[id].x, id + ' undone');
+    assert.notStrictEqual(u1['me-out1'].x, afterH['me-out1'].x, 'last move undone');
     await w.click('[data-wflay=undo]'); await H.sleep(200);
     await w.click('[data-wflay=undo]'); await H.sleep(200);
     await w.click('[data-wflay=undo]'); await H.sleep(200);

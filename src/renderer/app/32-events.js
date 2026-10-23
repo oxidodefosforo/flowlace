@@ -170,7 +170,7 @@ document.addEventListener('click',async e=>{
     case 'pj-tset':case 'tk-tset':tsToggle(act.slice(0,2),a);return;
     case 'pj-tset-close':case 'tk-tset-close':closeTSK(act.slice(0,2),true);return;
     case 'pj-tset-reset':case 'tk-tset-reset':tsReset(act.slice(0,2));return;
-    case 'wf-sphase':case 'wf-pphase':case 'wf-sspec':case 'wf-pspec':case 'wf-import':case 'wf-reviewed':case 'wf-node':case 'wf-sel':case 'wf-exp':case 'wf-move':case 'wf-retire':case 'wf-restore':case 'wf-save':case 'wf-discard':case 'wf-goto-settings':case 'wf-req-edit':wfAct(act,a);return;
+    case 'wf-sphase':case 'wf-pphase':case 'wf-sspec':case 'wf-pspec':case 'wf-stype':case 'wf-ptype':case 'wf-import':case 'wf-reviewed':case 'wf-node':case 'wf-sel':case 'wf-exp':case 'wf-move':case 'wf-retire':case 'wf-restore':case 'wf-save':case 'wf-discard':case 'wf-goto-settings':case 'wf-req-edit':wfAct(act,a);return;
     case 'prow-menu':openRowMenu(a);return;
     case 'panel-project-details':projPanelDetails(id);return;
     case 'pp-goto-details':projPanelDetails(id);return;

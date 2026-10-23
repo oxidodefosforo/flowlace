@@ -30,6 +30,22 @@ module.exports = function makeFixture(dir, opts = {}) {
     d.workflow.steps.find(s => s.id === 'el-out1').deps.push('el-ac3');
     d.workflow.steps.forEach((s, i) => { s.order = i; });
   }
+  if (opts.types) {   // v1.6: activity types, a Decision and a QA with Yes / No outlets, documents, and the A / B / C case
+    const add = (...a) => d.workflow.steps.push(st(...a)), last = () => d.workflow.steps[d.workflow.steps.length - 1];
+    add('el-dec', 'ph-sd', E, 'action', 'Emergency power check', ['el-ac1'], ['ro-eng']); Object.assign(last(), { type: 'decision', question: 'Is emergency power needed?', branches: { yes: 'el-yes', no: 'el-no' } });
+    add('el-yes', 'ph-sd', E, 'action', 'Size emergency power supply', ['el-dec'], ['ro-eng']);
+    add('el-no', 'ph-sd', E, 'action', 'Continue with normal supply', ['el-dec'], ['ro-eng']);
+    add('el-join', 'ph-sd', E, 'action', 'Update single line diagram', ['el-yes', 'el-no'], ['ro-dft']);
+    add('co-qa', 'ph-sd', C, 'action', 'Drawing package review', ['co-in1'], ['ro-qa']); Object.assign(last(), { type: 'qa', question: 'QA: Is the drawing package approved?', desc: 'Criteria: title blocks, revisions, clashes closed.', branches: { yes: 'co-issue', no: 'co-fix' } });
+    add('co-issue', 'ph-sd', C, 'output', 'Prepare package issue', ['co-qa'], ['ro-bimc']);
+    add('co-fix', 'ph-sd', C, 'action', 'Correct review comments', ['co-qa'], ['ro-dft']);
+    add('me-a', 'ph-sd', M, 'action', 'Define System Type', ['me-in1'], ['ro-eng']);
+    add('me-b', 'ph-sd', M, 'action', 'Define Fan and Roof Cowl', ['me-in1'], ['ro-eng']);
+    add('me-c', 'ph-sd', M, 'action', 'QA Sketches', ['me-a', 'me-b'], ['ro-qa']);
+    add('fi-ac1', 'ph-sd', 'sv-fire', 'action', 'Fire services layout', ['co-in1'], ['ro-eng']);
+    d.workflow.steps.find(x => x.id === 'co-in1').type = 'document';
+    d.workflow.steps.forEach((x, i) => { x.order = i; });
+  }
   if (opts.phases) {   // the flow continues in Design Development and Tender Issue (for All phases)
     d.workflow.steps.push(
       st('co-dd-in1', 'ph-dd', C, 'input', 'Coordinated architectural model', ['co-ac1'], ['ro-bimc']),

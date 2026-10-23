@@ -102,7 +102,13 @@ function tkGrowAll(){document.querySelectorAll('textarea.tnm-wrap').forEach(tkGr
    deliverable.reqTaskIds = workflow tasks (internal or external inputs) a delivery needs */
 const WF_COLS=[['input','Inputs'],['action','Actions'],['output','Outputs']];
 const WF_CAT={input:'Input',action:'Action',output:'Output'};
-const WF_SPEC_NAMES=['Electrical','Mechanical','Hydraulics','Coordination','Fire'];
+const WF_SPEC_NAMES=['Electrical','Mechanical','Hydraulics','Fire','Coordination'];
+/* activity type = shape and behaviour, independent of the category (where it belongs: Input / Action / Output) */
+const WF_TYPES=[['normal','Standard'],['decision','Decision'],['qa','QA / Approval'],['document','Document']];
+const WF_TYPE=Object.fromEntries(WF_TYPES);
+const wfType=s=>s&&WF_TYPE[s.type]?s.type:'normal';
+const wfIsDec=s=>{const t=wfType(s);return t==='decision'||t==='qa'};
+const WF_BR=[['yes','Yes'],['no','No']];   // stable branch ids; labels are display only
 const WF_EMPTY={version:0,appliedAt:null,demo:false,schema:2,steps:[]};
 const wfStd=()=>S.workflow||WF_EMPTY;
 const wfEdit=()=>S.workflowDraft||wfStd();
@@ -113,8 +119,9 @@ function wfStep(id,std){return (std||wfStd()).steps.find(s=>s.id===id)||null}
 const wfSpecOf=s=>s&&s.serviceId||'_none';
 function wfSpecName(id){return id==='_none'?'To classify':(service(id)?.name||'Unknown')}
 /* specialties: the five workflow flows first, then any other discipline of the catalogue */
-function wfSpecs(std){const all=S.services.map(s=>s.id),k=WF_SPEC_NAMES.map(n=>(S.services.find(s=>s.name.toLowerCase()===n.toLowerCase())||{}).id).filter(Boolean);
-  const out=[...k,...all.filter(id=>!k.includes(id))];if((std||wfEdit()).steps.some(s=>!s.retired&&!s.serviceId))out.push('_none');return out}
+function wfSpecs(std){const all=S.services.map(s=>s.id),byN=n=>(S.services.find(s=>s.name.toLowerCase()===n.toLowerCase())||{}).id,co=byN('Coordination'),k=WF_SPEC_NAMES.filter(n=>n!=='Coordination').map(byN).filter(Boolean);
+  /* Electrical, Mechanical, Hydraulics, Fire, any other specialty (in its order), and Coordination last: it involves all of them */
+  const out=[...k,...all.filter(id=>!k.includes(id)&&id!==co),...(co?[co]:[])];if((std||wfEdit()).steps.some(s=>!s.retired&&!s.serviceId))out.push('_none');return out}
 function wfPhaseSteps(std,phaseId,retired){return std.steps.filter(s=>s.phaseId===phaseId&&!!s.retired===!!retired).sort((a,b)=>WF_COLS.findIndex(c=>c[0]===a.cat)-WF_COLS.findIndex(c=>c[0]===b.cat)||a.order-b.order)}
 function wfColSteps(std,phaseId,cat,specs){return std.steps.filter(s=>s.phaseId===phaseId&&!s.retired&&s.cat===cat&&(!specs||specs.includes(wfSpecOf(s)))).sort((a,b)=>a.order-b.order)}
 function wfReaches(std,from,target,seen=new Set()){if(from===target)return true;if(seen.has(from))return false;seen.add(from);const s=wfStep(from,std);return !!s&&s.deps.some(d=>wfReaches(std,d,target,seen))}

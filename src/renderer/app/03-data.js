@@ -25,6 +25,8 @@ function sortTasks(arr){const pr={High:0,Normal:1,Low:2};return arr.slice().sort
 function newTask(o){const now=new Date().toISOString();return {id:uid('tk'),projectId:o.projectId,deliverableId:o.deliverableId||null,name:o.name,assignedToId:o.assignedToId||null,status:o.status||'To Do',priority:o.priority||'Normal',due:o.due||null,phaseId:o.deliverableId?null:(o.phaseId||null),serviceId:o.serviceId||null,source:o.source||'Planned',notes:o.notes||'',links:o.links||[],createdAt:now,updatedAt:now,completedAt:o.status==='Done'?now:null,seq:nextSeq()}}
 // One place for task changes: keeps completedAt and the deliverable/phase link consistent.
 function setTaskField(t,f,v){
+  /* a Decision / QA is completed with its answer */
+  if(f==='status'&&v==='Done'&&t.status!=='Done'&&typeof wfStep==='function'&&t.wfStepId){const s=wfStep(t.wfStepId);if(s&&wfIsDec(s)&&!t.wfAnswer&&wfIsInt(t)){toast(`“${s.name}” needs an answer (Yes or No) before it can be completed.`,'err');return false}}
   if(f==='status'){if(v==='Done'&&t.status!=='Done')t.completedAt=new Date().toISOString();else if(v!=='Done')t.completedAt=null}
   if(f==='deliverableId'){v=v||null;if(v){const d=deliv(v);if(!d||d.projectId!==t.projectId)return false;t.phaseId=null}else if(t.deliverableId){t.phaseId=deliv(t.deliverableId)?.phaseId||null}}
   if(f==='projectId'&&v!==t.projectId){if(t.deliverableId)t.phaseId=deliv(t.deliverableId)?.phaseId||null;t.deliverableId=null}

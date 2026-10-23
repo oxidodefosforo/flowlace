@@ -13,7 +13,8 @@ module.exports = function wfTools(getW) {
   const vert = P => P.slice(0, -1).map((p, i) => [p, P[i + 1]]).filter(([a, b]) => a[0] === b[0] && a[1] !== b[1]).map(([a, b]) => ({ x: a[0], y1: a[1], y2: b[1] }));
   const horz = P => P.slice(0, -1).map((p, i) => [p, P[i + 1]]).filter(([a, b]) => a[1] === b[1] && a[0] !== b[0]).map(([a, b]) => ({ y: a[1], x1: a[0], x2: b[0] }));
   const near = (v, a) => Math.abs(v - a) <= 3, inR = (v, a, l) => v >= a - 1 && v <= a + l + 1;   // the arrow tip stops 2 px before the side
-  const sideOf = (q, b) => near(q[0], b.x) && inR(q[1], b.y, HB) ? 'l' : near(q[0], b.x + W) && inR(q[1], b.y, HB) ? 'r' : near(q[1], b.y) && inR(q[0], b.x, W) ? 't' : near(q[1], b.y + HB) && inR(q[0], b.x, W) ? 'b' : null;
+  const sideOf = (q, b) => { const x = q[0] - b.x, y = q[1] - b.y; if (x < -4 || x > W + 4 || y < -4 || y > HB + 4) return null;   // slanted, rhombus and wavy outlines included
+    return y <= 3 ? 't' : y >= HB - 9 && x > 12 && x < W - 12 ? 'b' : x <= 15 ? 'l' : x >= W - 15 ? 'r' : null; };
   async function attached(k) { const [a, b] = k.split('>'), P = await pts(k), A = await box(a), B = await box(b); return { a: sideOf(P[0], A), b: sideOf(P[P.length - 1], B), P }; }
   const picked = () => w.evaluate(() => { const p = document.querySelector('path.wfe.on'); return p && p.dataset.k; });
   const zoom = () => w.evaluate(() => { const d = document.querySelector('.wfd'); return d.getBoundingClientRect().width / d.offsetWidth; });

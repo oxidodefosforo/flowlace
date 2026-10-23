@@ -190,12 +190,45 @@ En **Settings → Workspace & Storage → Backups** (en Company, solo los admini
 - **Relaciones en sentido contrario:** se conservan y se marcan para revisión. Por ejemplo, una Action que depende de un Output.
 - **Auto layout** aplica las mismas reglas.
 
-**Mover bloques.** Arrastra cualquier bloque; un clic sin arrastrar sigue seleccionándolo o abriéndolo.
+**Tipos de actividad.** Además de la categoría (Input, Action, Output: dónde va en el proceso), cada actividad tiene un **Activity type** que define su forma y comportamiento:
+
+| Tipo | Forma |
+|---|---|
+| Standard (Action) | rectángulo |
+| Standard (Input / Output) | paralelogramo |
+| Decision | rombo ámbar con salidas Yes / No |
+| QA / Approval | rombo violeta con la etiqueta **QA** y salidas Yes / No |
+| Document | rectángulo con el borde inferior ondulado |
+
+- Se elige al crear (selector junto al nombre en la matriz) y se cambia en **Show details**, que muestra una vista previa de la forma. Cambiar el tipo conserva id, nombre, descripción, categoría, fase, especialidad, dependencias, roles, tareas y posición. Si una Decision o QA con salidas pasa a otro tipo, se pregunta antes: conservar esas actividades como dependencias normales o quitar los enlaces.
+- La fila **Types** filtra por tipo, independientemente de especialidad, categoría y fase (y tiene su propia distribución). En **Depends on** hay también un filtro **Activity type**.
+- Las flechas se conectan al contorno de cada forma; los rombos admiten conexiones en sus cuatro lados.
+
+**Decision y QA.** Tienen una pregunta y dos salidas, **Yes** y **No**, con identificadores estables (no dependen del texto):
+
+- Se configuran en Show details (cada salida: una actividad existente o **＋ New activity…**) o desde el diagrama: menú del bloque → **Set Yes outlet… / Set No outlet…** y clic en la actividad, o **Connect** desde la Decision (pregunta si es Yes, No o una dependencia normal). Yes y No no pueden llevar a la misma actividad; los ciclos se rechazan.
+- Las ramas se ven con su etiqueta (Yes en verde, No en rojo). Si falta una salida, el bloque lo indica; no se crean actividades vacías.
+- El QA usa el mismo sistema; escribe los criterios de revisión en la descripción y asigna al revisor con los roles.
+- En el modelo, la salida queda registrada en la Decision y el enlace también figura en "Depends on" de la actividad destino; quitar esa dependencia deja la salida sin definir (y se avisa).
+
+**Respuestas en cada proyecto.** El estándar define pregunta, criterios y destinos; cada proyecto registra su respuesta en la tarea (tarjeta del Workflow o panel de la tarea): **Pending**, **Yes** o **No**.
+
+- Empieza en Pending, y una Decision o QA no puede marcarse como Done sin respuesta. Mientras está pendiente, lo que depende de ella espera.
+- Al responder, el camino elegido se resalta y continúa; el otro se atenúa. Las actividades que solo pertenecen a la rama no elegida no bloquean, no cuentan como trabajo pendiente y no se marcan como hechas; conservan sus datos.
+- Una actividad compartida donde las ramas se vuelven a unir aparece una sola vez y solo espera al camino elegido.
+- Cambiar una respuesta muestra qué actividades salen o vuelven al camino; el trabajo hecho, los responsables y el historial se conservan. Cada proyecto tiene sus propias respuestas: no cambian el estándar ni otros proyectos.
+
+**Mover bloques.** Arrastra cualquier bloque: **se mueve solo ese bloque**. Sus predecesoras y sucesoras se quedan donde están y las flechas se adaptan (aunque tengan que ir hacia la izquierda). Las dependencias nunca limitan el movimiento; lo único que lo limita son las zonas (un bloque no entra en una zona anterior, con la separación mínima), y cuando eso ocurre el separador se marca en rojo indicando qué zona termina ahí. Mover nunca cambia dependencias, fase, especialidad, categoría ni estado.
+
+- **Selección múltiple:** clic selecciona una actividad; **Mayús/Ctrl/Cmd + clic** agrega o quita; arrastrar sobre una zona vacía dibuja un **rectángulo** que selecciona las actividades visibles que toca (con Mayús amplía la selección); clic en una zona vacía deselecciona. El conjunto se rodea con un contorno y "N activities selected". La selección es temporal: no crea grupos.
+- **Mover en bloque:** arrastra cualquiera de las seleccionadas y todas se mueven con el mismo desplazamiento, conservando su distribución; las demás no se mueven. Si al soltar un bloque quedaría encima de otro, la superposición se marca en rojo durante el arrastre y el conjunto baja junto lo justo. Un movimiento es una sola operación de Undo; **Esc** durante el arrastre lo cancela.
+- **Select / Pan:** con **Pan**, arrastrar desplaza el lienzo; con cualquier herramienta, mantener **Espacio** y arrastrar también lo desplaza.
+- **Move with successors** (desactivado por defecto): al pasar sobre un bloque se resaltan lo que eligiste (azul) y lo que se añade automáticamente (ámbar, discontinuo) antes de arrastrar.
 
 - **Vertical:** el carril crece mientras arrastras y empuja hacia abajo los carriles inferiores, incluida "Other phases", con sus bloques y flechas. El bloque nunca cambia de especialidad.
-- **Horizontal:** se mueven con él las actividades que le siguen a su derecha. Si una Action necesita más espacio, la zona de Actions se amplía, el separador de Outputs se desplaza y los Outputs se apartan lo necesario. El movimiento se detiene en la posición válida más cercana: ninguna actividad queda antes que lo que necesita, y nada entra en una zona anterior.
+- **Horizontal:** si una Action necesita más espacio, la zona de Actions se amplía, el separador de Outputs se desplaza y los Outputs se apartan lo necesario (se ve mientras arrastras).
 - **Guías:** al acercar un bloque a otro aparecen guías rojas de alineación (bordes y centros) con un ajuste suave. Si sigues moviendo, el ajuste se suelta. En X sirven los bloques de cualquier carril; en Y, solo los del mismo carril.
-- **Varios bloques:** con **Edit layout**, Mayús o Ctrl + clic selecciona varios. El primero es la referencia fija. Están disponibles **Align columns**, **Align rows** y **Distribute**. Lo que no puede moverse por una dependencia, una zona o una superposición se queda donde estaba y se explica por qué.
+- **Alinear varios:** con varios seleccionados, el primero es la referencia fija. Están disponibles **Align columns**, **Align rows** y **Distribute**. Lo que no puede moverse por una dependencia, una zona o una superposición se queda donde estaba y se explica por qué.
 - **Teclado:** Alt + flechas mueve el bloque enfocado. **Esc** cancela un arrastre y lo devuelve a su sitio.
 
 **Ajustar flechas (clic sobre la línea)**
@@ -273,6 +306,8 @@ En **Settings → Workspace & Storage → Backups** (en Company, solo los admini
 - **En cada proyecto:** el proyecto parte de la distribución del estándar y guarda sus ajustes propios, que nunca cambian el estándar.
 - **Se mantiene** al cambiar de fase, filtrar, navegar entre proyectos, reiniciar y exportar o importar.
 
+**Orden de especialidades:** Electrical, Mechanical, Hydraulics, Fire, las demás especialidades configuradas y, al final, Coordination (involucra a todas). Se aplica a carriles, filtros y selectores; la distribución interna de cada carril se conserva.
+
 **Roles (Settings → People)**
 
 - **Catálogo editable:** Project Manager, Engineer, Senior Engineer, BIM Coordinator, BIM Modeler, Drafter y Reviewer / QA, más los que crees.
@@ -310,6 +345,7 @@ Se ejecutó todo en Linux (Ubuntu 24.04) con Electron 43.7.7 real, en pantalla v
 | Edición fina del workflow (18 comprobaciones, con "Prepare preliminary drawings" recibiendo tres flechas): selección por clic y flechas superpuestas; separar dos tramos verticales (izquierda/derecha) con cursor y vista previa; subir y bajar tramos horizontales; añadir y quitar quiebres; cambiar origen (abajo) y destino (arriba) sin desconectar, con Esc y suelta inválida; Reconnect con duplicado, autorreferencia, ciclo, cancelación y caso válido; ajustes que se conservan al mover bloques y flechas que no atraviesan bloques; flechas automáticas idénticas tras Reset all routes; Reset selected route; Auto layout conservando ajustes; arrastrar separadores (reducir, mínimo, ampliar) y Fit zones to content; orden, especialidad y dependencias; clic en un bloque sin mover página, diagrama ni zoom; Add prerequisites y Show details flotantes; controles al 80 % y 120 %; Undo/Redo de todo lo anterior; guardado al cambiar de fase y vista, publicar, reiniciar, exportar e importar; ajustes de proyecto separados del estándar; People y navegación intactos | 18/18 ✓ |
 | All phases, pantalla completa y lienzo (13 comprobaciones, con Fee → Sketch → Design Development → Tender Issue): orden de fases, encabezados y colores, zonas por fase y carriles alineados; dependencias entre fases entre bloques reales, sin duplicados, y referencias solo para lo filtrado; distribución y zoom propios de cada vista; pantalla completa que cubre la ventana con sus controles; mover, segmentos, anclajes, separadores, Add prerequisites, Show details y Auto layout dentro de ella; Esc en dos pasos conservando selección, cambios y posición, sin publicar; sin franja blanca al 100 %, 60 % y 40 %; área desplazable que sigue al zoom, a Fit to view y al tamaño de la ventana; flechas y puntos de paso seleccionables al 70 % y un quiebre bajo el último carril incluido; proyecto con All phases sin crear tareas; reinicio y datos íntegros | 13/13 ✓ |
 | Vistas y actividades nuevas (12 comprobaciones): agregar una actividad con bloques ordenados a mano sin mover ninguno (posiciones en pantalla, carriles, separadores y recorridos), en un hueco de su carril y zona y sin superposiciones; vistas que la incluyen o la excluyen; Locate new activity sin saltos de vista; con solo Electrical, mover un bloque por el espacio que usaban las especialidades ocultas y lienzo más estrecho; volver a todas las especialidades sin cambios; Electrical conserva sus ajustes; Electrical + Hydraulics = Hydraulics + Electrical; cambio de especialidad que pasa el bloque de una vista a otra; Auto layout solo en la vista activa, con Undo; con solo Mechanical y el espacio Inputs | Actions ensanchado, una Action vuelve hasta la separación mínima; reinicio con todas las vistas y su zoom; datos íntegros | 12/12 ✓ |
+| Tipos, Decision / QA y selección (12 comprobaciones): datos anteriores con tipo por defecto y Fire encima de Coordination; formas (rombo ámbar, rombo violeta con QA, documento ondulado, paralelogramos) con flechas en el contorno; salidas Yes / No etiquetadas, desde el menú y a una actividad nueva, pendientes señaladas, Yes = No rechazado; cambio de tipo que conserva todo y pregunta por las salidas; filtro por tipo; A no arrastra a C y B no bloquea a A; A + C juntas con B fija; A + B + C con rectángulo; Esc y una sola Undo; Move with successors con resaltado previo; sin muros por dependencias en una vista filtrada; Pan y Espacio; respuestas por proyecto (Pending bloquea, No / Yes, rama no elegida atenuada y fuera del total, unión compartida, cambio de respuesta con lista y datos conservados, QA con su resultado), otro proyecto y estándar intactos; reinicio | 12/12 ✓ |
 | Paquete de servidor: `node.exe` de Windows ejecutado con Wine (init, serve, login, commit, backup) | ✓ |
 
 **Compilación de Windows:** `FlowlaceSetup.exe` (Squirrel), el zip portátil y el paquete de Flowlace Server se generaron en Linux con Wine y Mono. Se verificó que `Flowlace.exe` lleva el icono, el nombre y los metadatos.

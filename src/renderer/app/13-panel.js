@@ -133,7 +133,7 @@ function moveTask(t,field,val){
   if(field==='projectId'){if(val===t.projectId)return;const had=!!t.deliverableId;setTaskField(t,'projectId',val);note=`Moved to ${project(val).code}${had?'. Its deliverable link was cleared; choose a deliverable from the new project if it applies':''}`;
     if(ui.panel&&ui.panel.type==='task'&&ui.panel.id===t.id&&had)ui.panelNote='Project changed, so the deliverable link was cleared. Choose a deliverable from this project if it applies.'}
   else if(field==='assignedToId'){val=val||null;if(val===(t.assignedToId||null))return;setTaskField(t,'assignedToId',val);note=`${t.name} → ${val?pname(val):'Unassigned'}`}
-  else{if(val===t.status)return;setTaskField(t,'status',val);note=`${t.name}: ${TGLYPH[val]} ${val}`}
+  else{if(val===t.status)return;if(setTaskField(t,'status',val)===false){render();return}note=`${t.name}: ${TGLYPH[val]} ${val}`}
   save();render();toast(note,'',undo);
 }
 

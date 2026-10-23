@@ -4,12 +4,14 @@ function wfNormStd(w,phaseIds,svIds){
   if(!w||typeof w!=='object'||!Array.isArray(w.steps))return null;
   const ids=new Set(),steps=[];
   w.steps.forEach((s,i)=>{if(!s||!s.id||ids.has(s.id)||!phaseIds.has(s.phaseId))return;ids.add(s.id);
-    steps.push({id:String(s.id),phaseId:s.phaseId,serviceId:svIds.has(s.serviceId)?s.serviceId:null,cat:WF_CAT[s.cat]?s.cat:'action',name:String(s.name||'Untitled step').slice(0,160),desc:String(s.desc||''),deps:Array.isArray(s.deps)?s.deps.map(String):[],order:typeof s.order==='number'?s.order:i,retired:!!s.retired,createdAt:s.createdAt||null,roleIds:[...new Set(arr(s.roleIds).map(String))]})});
+    steps.push({id:String(s.id),phaseId:s.phaseId,serviceId:svIds.has(s.serviceId)?s.serviceId:null,cat:WF_CAT[s.cat]?s.cat:'action',name:String(s.name||'Untitled step').slice(0,160),desc:String(s.desc||''),deps:Array.isArray(s.deps)?s.deps.map(String):[],order:typeof s.order==='number'?s.order:i,retired:!!s.retired,createdAt:s.createdAt||null,roleIds:[...new Set(arr(s.roleIds).map(String))],
+      type:WF_TYPE[s.type]?s.type:'normal',question:String(s.question||'').slice(0,300),branches:s.branches&&typeof s.branches==='object'?{yes:s.branches.yes?String(s.branches.yes):null,no:s.branches.no?String(s.branches.no):null}:{yes:null,no:null}})});
   const byId=new Map(steps.map(s=>[s.id,s]));
   /* links across phases and specialties are kept; only self links, duplicates, missing or retired steps go */
   steps.forEach(s=>{s.deps=[...new Set(s.deps)].filter(d=>d!==s.id&&byId.has(d)&&!byId.get(d).retired)});
   const std={version:Math.max(0,parseInt(w.version)||0),appliedAt:w.appliedAt||null,demo:!!w.demo,schema:2,demoV2:!!w.demoV2,steps,layout:wfLayoutsNorm(w.layout)};
   steps.forEach(s=>{s.deps=s.deps.filter(d=>!wfReaches({steps},d,s.id))}); // break any loop in a hand-edited backup
+  wfBranchNorm(steps);
   return std;
 }
 function normWF(o,d){
@@ -22,7 +24,9 @@ function normWF(o,d){
   o.tasks.forEach(t=>{t.wfStepId=t.wfStepId?String(t.wfStepId):null;if(!t.wfStepId){delete t.wfExecutionMode;return}
     const k=t.projectId+'|'+t.wfStepId;if(seen.has(k)){t.wfStepId=null;delete t.wfExecutionMode;return}seen.add(k);
     t.wfExecutionMode=t.wfExecutionMode==='externalInput'?'externalInput':'internal';   // tasks generated before v2 are previously imported internal activities
-    t.wfConsultant=String(t.wfConsultant||'');t.wfOutOfScope=!!t.wfOutOfScope;t.wfReview=!!t.wfReview;t.wfModeLog=arr(t.wfModeLog).filter(x=>x&&x.to)});
+    t.wfConsultant=String(t.wfConsultant||'');t.wfOutOfScope=!!t.wfOutOfScope;t.wfReview=!!t.wfReview;t.wfModeLog=arr(t.wfModeLog).filter(x=>x&&x.to);
+    /* answer of a Decision / QA in this project (Pending = null) and its history */
+    t.wfAnswer=t.wfAnswer==='yes'||t.wfAnswer==='no'?t.wfAnswer:null;t.wfAnswerLog=arr(t.wfAnswerLog).filter(x=>x&&x.at)});
   o.deliverables.forEach(x=>{x.reqTaskIds=[...new Set(arr(x.reqTaskIds))].filter(id=>{const t=tasksBy.get(id);return t&&t.projectId===x.projectId})});
   const steps=new Map(((o.workflow||{}).steps||[]).map(s=>[s.id,s]));
   o.projects.forEach(p=>{p.wfVersion=parseInt(p.wfVersion)||0;
@@ -35,6 +39,16 @@ function normWF(o,d){
     p.wfLayout=wfLayoutsNorm(p.wfLayout);   // visual adjustments of this project (never change the standard)
     const pes=new Set(o.people.map(x=>x.id)),rm={};if(p.wfRoleMap&&typeof p.wfRoleMap==='object')Object.entries(p.wfRoleMap).forEach(([k,v])=>{if(/^[^|]+\|[^|]+$/.test(k)&&pes.has(v))rm[k]=v});p.wfRoleMap=rm});
 }
+
+/* Decision / QA outlets: { yes: stepId | null, no: stepId | null }. A conditional link is also kept in the target's
+   "Depends on" (so import, order and loop checks see it); the decision's branches mark which of those links are conditional. */
+function wfBranchNorm(steps){const by=new Map(steps.map(s=>[s.id,s]));
+  steps.forEach(s=>{if(!wfIsDec(s)){s.branches={yes:null,no:null};return}const b=s.branches||{};const out={yes:null,no:null};
+    WF_BR.forEach(([k])=>{const t=b[k]&&by.get(b[k]);if(!t||t.id===s.id||t.retired)return;if(k==='no'&&out.yes===t.id)return;
+      if(!t.deps.includes(s.id)){if(wfReaches({steps},s.id,t.id))return;t.deps.push(s.id)}out[k]=t.id});s.branches=out})}
+/* the conditional link that leads to a step, if any: [{d: decision step, b: 'yes'|'no'}] */
+function wfCondIn(stepId,std){return (std||wfStd()).steps.filter(d=>!d.retired&&wfIsDec(d)&&d.branches&&(d.branches.yes===stepId||d.branches.no===stepId)).map(d=>({d,b:d.branches.yes===stepId?'yes':'no'}))}
+const wfBranchOf=(d,stepId)=>d&&d.branches?(d.branches.yes===stepId?'yes':d.branches.no===stepId?'no':null):null;
 
 /* ---------- refresh (never creates anything): definitions of the standard flow into the existing records ---------- */
 function wfTaskName(s,mode){return mode==='externalInput'?'External input: '+s.name:s.name}
@@ -77,7 +91,7 @@ function wfApplyPlan(p,R,selPhases){
   const now=new Date().toISOString(),log=(t,from,to)=>{t.wfModeLog=[...(t.wfModeLog||[]),{at:now,from,to}];t.wfReview=true};
   const phaseFor=(s,consumers)=>ppFor(p.id,s.phaseId)?s.phaseId:((consumers||[]).map(c=>c.phaseId).find(ph=>ppFor(p.id,ph))||null);
   const mk=(s,mode,consumers)=>{const t=newTask({projectId:p.id,name:wfTaskName(s,mode),phaseId:phaseFor(s,consumers),status:'To Do',priority:'Normal',source:'Planned'});
-    t.assignedToId=null;t.due=null;t.wfStepId=s.id;t.wfExecutionMode=mode;t.wfConsultant='';t.wfOutOfScope=false;t.wfReview=false;t.wfModeLog=[];S.tasks.push(t);return t};
+    t.assignedToId=null;t.due=null;t.wfStepId=s.id;t.wfExecutionMode=mode;t.wfConsultant='';t.wfOutOfScope=false;t.wfReview=false;t.wfModeLog=[];t.wfAnswer=null;t.wfAnswerLog=[];S.tasks.push(t);return t};
   R.newInt.forEach(s=>mk(s,'internal'));
   R.newExt.forEach(x=>mk(x.s,'externalInput',x.consumers));
   R.toInt.forEach(({s,t})=>{log(t,'externalInput','internal');t.wfExecutionMode='internal';t.wfOutOfScope=false;t.name=wfTaskName(s,'internal');t.updatedAt=now});
@@ -99,26 +113,39 @@ function wfDepState(pid,ds){
   if(t)return {s:ds,t,kind:wfIsInt(t)?'internal':'external',ok:t.status==='Done'};
   const m=wfModeFor(p,ds);return {s:ds,t:null,kind:m==='internal'?'notImported':m==='external'?'externalMissing':'unresolved',ok:false};
 }
+/* paths of a project after its answers: a step is OFF the chosen path when every conditional link that leads to it was
+   answered the other way (or comes from a step that is off the path), or when everything it depends on is off the path.
+   Off-path steps never block, are not counted as pending work and are not marked done; their data is kept. */
+function wfOffPath(pid,stepId,memo){memo=memo||{};if(stepId in memo)return memo[stepId];memo[stepId]=false;
+  const s=wfStep(stepId);if(!s||s.retired)return false;const cin=wfCondIn(stepId);let off=false;
+  if(cin.length)off=cin.every(({d,b})=>{if(wfOffPath(pid,d.id,memo))return true;const a=wfAnswer(pid,d.id);return !!a&&a!==b});
+  else{const ds=s.deps.map(d=>wfStep(d)).filter(x=>x&&!x.retired);off=ds.length>0&&ds.every(x=>wfOffPath(pid,x.id,memo))}
+  return memo[stepId]=off}
+function wfAnswer(pid,stepId){const t=wfTask(pid,stepId);return t?t.wfAnswer||null:null}
+const wfOffTask=(t,memo)=>!!(t&&t.wfStepId&&wfOffPath(t.projectId,t.wfStepId,memo));
 function wfAvail(t){
-  const s=t&&t.wfStepId&&wfStep(t.wfStepId);if(!s)return null;
+  const s=t&&t.wfStepId&&wfStep(t.wfStepId);if(!s)return null;const memo={};
+  if(wfOffTask(t,memo))return {k:'skip',label:'Not on the chosen path',miss:[]};
   if(!wfIsInt(t))return t.status==='Done'?{k:'received',label:'Received & validated',miss:[]}:{k:'awaiting',label:t.status==='To Do'?'Not requested yet':'Awaiting external input',miss:[]};
-  const miss=s.retired?[]:s.deps.map(d=>wfStep(d)).filter(x=>x&&!x.retired).map(x=>wfDepState(t.projectId,x)).filter(x=>!x.ok);
+  /* requirements: what is off the path does not count; a conditional link is met by the answer that leads here */
+  const miss=s.retired?[]:s.deps.map(d=>wfStep(d)).filter(x=>x&&!x.retired&&!wfOffPath(t.projectId,x.id,memo)).map(x=>{const b=wfBranchOf(x,s.id);
+    if(b){const a=wfAnswer(t.projectId,x.id);return a===b?{s:x,ok:true}:{s:x,t:wfTask(t.projectId,x.id),kind:'decision',ok:false}}return wfDepState(t.projectId,x)}).filter(x=>!x.ok);
   if(t.status==='Done')return {k:'done',label:'Completed',miss,warn:miss.length?`Completed while requirements are pending: ${wfMissText(miss)}`:''};
   if(t.status!=='To Do')return {k:'doing',label:'In progress',miss,warn:miss.length?`Started before ${miss.map(x=>x.s.name).join(', ')}`:''};
   return miss.length?{k:'blocked',label:'Waiting for requirements',miss}:{k:'ready',label:'Available to start',miss};
 }
-const WF_MISS={internal:'internal, not done',external:'external input not received',notImported:'internal requirement not imported',externalMissing:'external input not set up',unresolved:'source pending resolution'};
+const WF_MISS={decision:'answer pending',internal:'internal, not done',external:'external input not received',notImported:'internal requirement not imported',externalMissing:'external input not set up',unresolved:'source pending resolution'};
 function wfMissText(m){return m.map(x=>`${x.s.name} (${WF_MISS[x.kind]})`).join(', ')}
-function wfAvailChip(a){if(!a)return '';const ic={done:'✓',doing:'◐',ready:'▶',blocked:'⏸',received:'✓',awaiting:'⇢'}[a.k];
+function wfAvailChip(a){if(!a)return '';const ic={done:'✓',doing:'◐',ready:'▶',blocked:'⏸',received:'✓',awaiting:'⇢',skip:'⤳'}[a.k];
   return `<span class="wfa wfa-${a.k}" title="${esc(a.k==='blocked'?'Waiting for '+wfMissText(a.miss):a.warn||a.label)}">${ic} ${a.label}</span>`}
 function wfReqOf(t){return S.deliverables.filter(d=>(d.reqTaskIds||[]).includes(t.id))}
-function wfReqMet(d){const ts=(d.reqTaskIds||[]).map(id=>S.tasks.find(t=>t.id===id)).filter(Boolean);return {done:ts.filter(t=>t.status==='Done').length,total:ts.length,ts}}
+function wfReqMet(d){const memo={},all=(d.reqTaskIds||[]).map(id=>S.tasks.find(t=>t.id===id)).filter(Boolean),ts=all.filter(t=>!wfOffTask(t,memo));return {done:ts.filter(t=>t.status==='Done').length,total:ts.length,ts,off:all.length-ts.length}}
 function wfBar(done,total){const pc=total?Math.round(done/total*100):0;return `<span class="wfbar" role="img" aria-label="${done} of ${total} done"><i style="width:${pc}%"></i></span>`}
 function wfConsumers(t){const s=wfStep(t.wfStepId);if(!s)return [];return S.tasks.filter(x=>x.projectId===t.projectId&&x.wfStepId&&wfIsInt(x)&&wfLive(x)&&(wfStep(x.wfStepId)?.deps||[]).includes(s.id))}
 /* internal production of a phase (external consultants' design is never counted as ours) */
 function wfIntTasks(pid,ph,specs){return S.tasks.filter(t=>t.projectId===pid&&t.wfStepId&&wfIsInt(t)&&wfLive(t)&&wfStep(t.wfStepId).phaseId===ph&&(!specs||specs.includes(wfSpecOf(wfStep(t.wfStepId)))))}
 function wfExtTasks(pid,ph){const ints=wfIntTasks(pid,ph),need=new Set(ints.flatMap(t=>wfStep(t.wfStepId).deps));return S.tasks.filter(t=>t.projectId===pid&&t.wfStepId&&!wfIsInt(t)&&need.has(t.wfStepId))}
-function wfProgress(pid,ph,specs){const ts=wfIntTasks(pid,ph,specs);return {done:ts.filter(t=>t.status==='Done').length,total:ts.length}}
+function wfProgress(pid,ph,specs){const memo={},ts=wfIntTasks(pid,ph,specs).filter(t=>!wfOffTask(t,memo));return {done:ts.filter(t=>t.status==='Done').length,total:ts.length}}
 function wfStdPhases(pid){const used=new Set(wfStd().steps.filter(s=>!s.retired).map(s=>s.phaseId));return ppOf(pid).filter(pp=>pp.status!=='Not applicable'&&used.has(pp.phaseId)).map(pp=>pp.phaseId)}
 function wfProjPhases(pid){const p=project(pid);return wfStdPhases(pid).filter(ph=>(p.wfScope||{})[ph])}
 

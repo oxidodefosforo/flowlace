@@ -3,14 +3,14 @@
    Used in the step details (Company workflow matrix) and in "Add prerequisite…" from the diagram. Filters combine
    with AND; the options of one filter with OR. Filters only change what is listed: they never remove a selection.
    The selection is the step's deps array in the draft — the same data the diagram and the matrix show. */
-function wfDPState(id,ph){ui.wfDF=ui.wfDF||{};return ui.wfDF[id]||(ui.wfDF[id]={q:'',types:[],svcs:[],phases:[ph]})}
+function wfDPState(id,ph){ui.wfDF=ui.wfDF||{};return ui.wfDF[id]||(ui.wfDF[id]={q:'',types:[],atypes:[],svcs:[],phases:[ph]})}
 function wfDPResults(s,ed){
   const st=wfDPState(s.id,s.phaseId),q=st.q.trim().toLowerCase(),order=wfSpecs(ed);
-  return ed.steps.filter(x=>!x.retired&&(!q||(x.name+' '+(x.desc||'')).toLowerCase().includes(q))&&(!st.types.length||st.types.includes(x.cat))&&(!st.svcs.length||st.svcs.includes(wfSpecOf(x)))&&(!st.phases.length||st.phases.includes(x.phaseId)))
+  return ed.steps.filter(x=>!x.retired&&(!q||(x.name+' '+(x.desc||'')).toLowerCase().includes(q))&&(!st.types.length||st.types.includes(x.cat))&&(!(st.atypes||[]).length||st.atypes.includes(wfType(x)))&&(!st.svcs.length||st.svcs.includes(wfSpecOf(x)))&&(!st.phases.length||st.phases.includes(x.phaseId)))
     .sort((a,b)=>S.phases.findIndex(p=>p.id===a.phaseId)-S.phases.findIndex(p=>p.id===b.phaseId)||order.indexOf(wfSpecOf(a))-order.indexOf(wfSpecOf(b))||WF_COLS.findIndex(c=>c[0]===a.cat)-WF_COLS.findIndex(c=>c[0]===b.cat)||a.order-b.order);
 }
 function wfDPWhy(s,x,ed){if(x.id===s.id)return 'An activity can’t depend on itself';if(!s.deps.includes(x.id)&&wfCycle(ed,s.id,x.id))return `Not possible: “${x.name}” already depends on “${s.name}” (it would create a loop)`;return ''}
-const wfDPMeta=x=>`${WF_CAT[x.cat]} · ${esc(wfSpecName(wfSpecOf(x)))} · ${esc(phName(x.phaseId))}`;
+const wfDPMeta=x=>`${WF_CAT[x.cat]}${wfType(x)!=='normal'?' · '+WF_TYPE[wfType(x)]:''} · ${esc(wfSpecName(wfSpecOf(x)))} · ${esc(phName(x.phaseId))}`;
 function wfDPList(s,ed){
   const res=wfDPResults(s,ed);
   return `<p class="wfdp-n muted" aria-live="polite">${plural(res.length,'result')}</p><div class="wfdp-list" role="group" aria-label="Activities ${esc(s.name)} can depend on">${res.length?res.map(x=>{const on=s.deps.includes(x.id),why=wfDPWhy(s,x,ed);
@@ -23,7 +23,8 @@ function wfDepPicker(s,ed){
   return `<div class="wfdp" id="wfdp-${s.id}">
     <div class="wfdp-sel"><span class="wfdp-l">Depends on <span class="muted">${sel.length}</span></span>${sel.length?sel.map(d=>`<span class="chip wfdp-s${d.phaseId!==s.phaseId?' other':''}" title="${wfDPMeta(d)}">${esc(d.name)} <small>${WF_CAT[d.cat]} · ${esc(wfSpecName(wfSpecOf(d)))}${d.phaseId!==s.phaseId?' · '+esc(phName(d.phaseId)):''}</small><button type="button" class="x" data-wfdrm="${s.id}" data-v="${d.id}" aria-label="Remove ${esc(d.name)}">×</button></span>`).join(''):'<span class="muted">No dependencies</span>'}</div>
     <div class="wfdp-f"><input class="in sm" type="search" data-wfdq="${s.id}" value="${esc(st.q)}" placeholder="Search name or description" aria-label="Search activities">
-      <div class="wfdp-g" role="group" aria-label="Type"><span>Type</span>${WF_COLS.map(([k])=>chip('types',k,WF_CAT[k],st.types.includes(k))).join('')}</div>
+      <div class="wfdp-g" role="group" aria-label="Category"><span>Category</span>${WF_COLS.map(([k])=>chip('types',k,WF_CAT[k],st.types.includes(k))).join('')}</div>
+      <div class="wfdp-g" role="group" aria-label="Activity type"><span>Activity type</span>${WF_TYPES.map(([k,l])=>chip('atypes',k,l,(st.atypes||[]).includes(k))).join('')}</div>
       <div class="wfdp-g" role="group" aria-label="Service"><span>Service</span>${wfSpecs(ed).map(id=>chip('svcs',id,wfSpecName(id),st.svcs.includes(id))).join('')}</div>
       <div class="wfdp-g" role="group" aria-label="Phase"><span>Phase</span>${chip('phases','_all','All phases',!st.phases.length)}${phs.map(g=>chip('phases',g.id,g.name,st.phases.includes(g.id))).join('')}</div>
       <button type="button" class="btn sm ghost" data-wfdclr="${s.id}">Clear filters</button></div>
@@ -33,11 +34,11 @@ function wfDPRefresh(id,focus){const ed=wfEdit(),s=wfStep(id,ed);if(!s)return;do
 document.addEventListener('input',e=>{const el=e.target;if(!el.dataset||!el.dataset.wfdq)return;const s=wfStep(el.dataset.wfdq,wfEdit());if(!s)return;
   wfDPState(s.id,s.phaseId).q=el.value;const box=el.closest('.wfdp');if(box){const r=box.querySelector('.wfdp-res');if(r)r.innerHTML=wfDPList(s,wfEdit())}},true);
 document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-wfdf],[data-wfdclr],[data-wfdrm]');if(!t)return;e.preventDefault();e.stopPropagation();
-  if(t.dataset.wfdrm){const dr=wfDraft(),s=wfStep(t.dataset.wfdrm,dr);if(!s)return;const v=t.dataset.v;wfHistDeps(s.phaseId);wfMutate(()=>{s.deps=s.deps.filter(x=>x!==v)});wfPrereqRefresh();return}
+  if(t.dataset.wfdrm){const dr=wfDraft(),s=wfStep(t.dataset.wfdrm,dr);if(!s)return;const v=t.dataset.v;wfHistDeps(s.phaseId);wfMutate(d=>{s.deps=s.deps.filter(x=>x!==v);wfUnbranch(d,v,s.id)});wfPrereqRefresh();return}
   const id=t.dataset.wfdclr||t.dataset.sid,s=wfStep(id,wfEdit());if(!s)return;const st=wfDPState(id,s.phaseId);
-  if(t.dataset.wfdclr){st.q='';st.types=[];st.svcs=[];st.phases=[];wfDPRefresh(id,`[data-wfdq="${id}"]`);return}
+  if(t.dataset.wfdclr){st.q='';st.types=[];st.atypes=[];st.svcs=[];st.phases=[];wfDPRefresh(id,`[data-wfdq="${id}"]`);return}
   const k=t.dataset.wfdf,v=t.dataset.v;
-  if(k==='phases'&&v==='_all')st.phases=[];else{const a=new Set(st[k]);a.has(v)?a.delete(v):a.add(v);st[k]=[...a]}
+  if(k==='phases'&&v==='_all')st.phases=[];else{const a=new Set(st[k]||[]);a.has(v)?a.delete(v):a.add(v);st[k]=[...a]}
   wfDPRefresh(id,`[data-wfdf="${k}"][data-sid="${id}"][data-v="${v}"]`)},true);
 
 /* ---------- floating editor next to a block: "Add prerequisites" and "Show details" ----------
