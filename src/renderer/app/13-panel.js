@@ -32,7 +32,7 @@ function renderPanel(){
       crumbs=`<button data-act="panel-project" data-id="${p.id}" data-push="1">${esc(p.code)} · ${esc(p.name)}</button>`;body=panelPPhase(pp);menu=menuHTML('pn',[{act:'pp-remove',id:pp.id,label:'Remove phase from project…',cls:'danger-t'}])}}
   else if(P.type==='list'){kind=P.kindLabel||'List';title=esc(P.title);body=panelList(P)}
   if(!ok){ui.panel=null;return ''}
-  return `<div class="pn-head"><div class="pn-bar">${ui.panelStack.length?'<button class="btn sm ghost" data-act="panel-back">‹ Back</button>':''}<div class="crumbs">${crumbs}</div>${P.type!=='list'?saveIndHTML('pn-save'):''}${menu}<button class="pn-close" data-act="panel-close" aria-label="Close details panel (Escape)">✕ Close</button></div><div class="pn-kind">${kind}</div><h2 class="pn-title" id="pn-title" tabindex="-1">${title}</h2></div><div class="pn-body" id="pn-body">${ui.panelNote?`<div class="pn-warn" role="status">${esc(ui.panelNote)}</div>`:''}${body}</div>`;
+  return `<div class="pn-head"><div class="pn-bar">${ui.panelStack.length?'<button class="btn sm ghost" data-act="panel-back">‹ Back</button>':''}<div class="crumbs">${crumbs}</div>${P.type==='task'?'<span id="pn-step-slot"></span>':''}${P.type!=='list'?saveIndHTML('pn-save'):''}${menu}<button class="pn-close" data-act="panel-close" aria-label="Close details panel (Escape)">✕ Close</button></div><div class="pn-kind">${kind}</div><h2 class="pn-title" id="pn-title" tabindex="-1">${title}</h2></div><div class="pn-body" id="pn-body">${ui.panelNote?`<div class="pn-warn" role="status">${esc(ui.panelNote)}</div>`:''}${body}</div>`;
 }
 function fld(label,inner,o={}){return `<div class="fld${o.span?' span2':''}"><span class="lb">${label}</span>${inner}</div>`}
 function panelProject(p){

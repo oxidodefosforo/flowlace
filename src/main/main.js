@@ -33,7 +33,7 @@ function send(ch, payload) { if (win && !win.isDestroyed()) win.webContents.send
 function createWindow() {
   const b = settings.data.window || {};
   win = new BrowserWindow({
-    width: b.width || 1440, height: b.height || 900, x: b.x, y: b.y, minWidth: 1000, minHeight: 640,
+    width: b.width || 1440, height: b.height || 900, x: b.x, y: b.y, minWidth: 720, minHeight: 560,
     title: 'Flowlace', show: false, backgroundColor: '#F5F4F0',
     icon: path.join(__dirname, '..', '..', 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     autoHideMenuBar: false,

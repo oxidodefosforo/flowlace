@@ -42,7 +42,13 @@ async function until(fn, ms = 8000, what = 'condition') {
   for (;;) { let v; try { v = await fn(); } catch (_) { v = false; } if (v) return v; if (Date.now() - t0 > ms) throw new Error('timeout waiting for ' + what); await sleep(100); }
 }
 /* the app's state is private; read it through what is rendered or through the main-process store */
-const appReady = w => until(() => w.evaluate(() => !!document.querySelector('#top .nav') && document.getElementById('ms-start').hidden), 15000, 'app ready');
+/* The scenarios written before v1.8 measure the diagram with the full window width: they run with the sidebar collapsed
+   (a personal, per-computer setting). ui-shell.js sets keepSidebar and tests the sidebar itself. */
+const opts = { keepSidebar: false };
+const appReady = async w => {
+  await until(() => w.evaluate(() => !!document.querySelector('#side .nav') && document.getElementById('ms-start').hidden), 15000, 'app ready');
+  if (!opts.keepSidebar) await w.evaluate(() => { if (!document.getElementById('app').classList.contains('side-off')) { const b = document.querySelector('#side [data-act=side-toggle]'); if (b) b.click(); } });
+};
 const saved = w => until(() => w.evaluate(() => { const el = document.getElementById('save-ind'); return el && /Saved|All changes saved/.test(el.textContent); }), 10000, 'saved');
 async function shot(w, name) { await w.screenshot({ path: path.join(SHOTS, name + '.png') }); }
 
@@ -53,4 +59,4 @@ async function step(name, fn) {
 }
 function summary(label) { console.log(`${label}: ${passed} passed, ${failed} failed`); return failed; }
 
-module.exports = { launch, answerDialogs, until, sleep, appReady, saved, shot, step, summary, tmp, assert, ROOT, SHOTS };
+module.exports = { opts, launch, answerDialogs, until, sleep, appReady, saved, shot, step, summary, tmp, assert, ROOT, SHOTS };

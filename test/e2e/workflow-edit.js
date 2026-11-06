@@ -65,7 +65,7 @@ module.exports = async function run() {
     assert.ok(/BIM Coordinator|Reviewer/.test(await w.evaluate(i => document.querySelector(`[data-perole="${i}"]`).closest('details').querySelector('summary').textContent, id)), tag + ': summary updated');
     const pe = rec(records(dbFile), 'people', id);
     assert.ok(pe.name.endsWith(tag) && pe.disciplineId === 'sv-coordination' && pe.roleIds.includes(r), tag + ': saved ' + JSON.stringify(pe));
-    await w.click('#top [data-act=nav][data-to=overview]').catch(async () => { await go('overview'); });
+    await w.evaluate(() => document.querySelector('#side [data-act=nav][data-to=overview]').click());   // the main menu (sidebar collapsed in this scenario)
     await H.sleep(200);
     assert.ok(/Overview/.test(await w.textContent('#main')), tag + ': navigating to another section works');
   }

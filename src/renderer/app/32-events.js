@@ -15,10 +15,17 @@ document.addEventListener('click',async e=>{
     case 'cf-yes':{const r=confirmResolve;confirmResolve=null;modalRoot.innerHTML='';r&&r(true);return}
     case 'cf-no':closeModal();return;
     case 'cf-choice':{const r=confirmResolve;confirmResolve=null;modalRoot.innerHTML='';r&&r(a.dataset.v);return}
-    case 'nav':navSection(a.dataset.to);return;
+    case 'nav':if(isNarrow())sideDrawer=false;navSection(a.dataset.to);return;
+    case 'side-toggle':setSide(!(isNarrow()?sideDrawer:sideSt.open));return;
+    case 'side-close':setSide(false);return;
+    case 'side-sec':sideSt[a.dataset.v]=!sideSt[a.dataset.v];saveSide();renderShell();{const b=document.querySelector(`[data-act=side-sec][data-v=${a.dataset.v}]`);b&&b.focus()}return;
+    case 'qs-open':openQS();return;
+    case 'side-new-project':if(isNarrow())setSide(false);openNewProject();return;
+    case 'panel-step':panelStep(+a.dataset.d);return;
+    case 'tgrp-toggle':{const c=ctxOf(curPid()),k=c.key+'|'+c.cfg.tgroup,set=tgCollapsed(c),v=a.dataset.v;set.has(v)?set.delete(v):set.add(v);prefs.tgCol={...(prefs.tgCol||{}),[k]:[...set]};savePrefs();ui.focusAfter=a.id;render();return}
     case 'go-list':go('projects');return;
     case 'new-project':openNewProject();return;
-    case 'open-project':go('p-'+id);return;
+    case 'open-project':if(isNarrow())sideDrawer=false;go('p-'+id);return;
     case 'open-full':{const tab=a.dataset.tab;ui.panel=null;ui.panelStack=[];go('p-'+id,{tab:tab||'summary'});return}
     case 'ptab':setPtab(a.dataset.v);return;
     case 'panel-project':openPanel('project',id,{push});return;
@@ -405,6 +412,7 @@ document.addEventListener('submit',async e=>{
     const v={id:uid('v'),name,projectId:pid,...normCfg(cfg,pid),createdAt:now,updatedAt:now};
     S.views.push(v);
     if(mode==='saveas')delete prefs.drafts[c.key]; // the view it started from stays exactly as saved
+    {const src=(mode==='dup'?vid:c.key)+'|'+v.tgroup,tc=prefs.tgCol||{};if(tc[src])prefs.tgCol={...tc,[v.id+'|'+v.tgroup]:tc[src].slice()}}  // collapsed table groups go with the new view
     prefs.activeView[scopeKeyOf(pid)]=v.id;ui.cfgOpen=null;ui.colAdd=null;savePrefs();save();closeModal(true);render();
     toast(mode==='dup'?`“${name}” created as a copy`:`View “${name}” saved${mode==='saveas'&&c.view?` · “${c.view.name}” is unchanged`:''}`);
     const b=document.querySelector(`.vtab[data-id="${v.id}"]`);b&&b.focus();

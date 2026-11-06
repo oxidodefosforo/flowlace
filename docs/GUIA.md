@@ -334,7 +334,64 @@ Se configuran en Show details (salidas y lista de retornos), desde el menú del 
 
 Las asignaciones existentes nunca se cambian solas, aunque cambien los roles de una persona o del estándar. Los inputs externos no reciben responsable propuesto: su diseño es del consultor, y el seguimiento interno se elige a mano.
 
-## 10. Qué se comprobó en esta entrega
+## 10. Interfaz (1.8): barra lateral, búsqueda, panel y grupos en la tabla
+
+La interfaz sigue el estilo de Notion: página blanca, barra lateral gris suave y texto gris oscuro. Las etiquetas van en mayúscula inicial y los separadores son finos. El color se reserva para estados, prioridades, fases, disciplinas y la acción principal. El modo oscuro usa los mismos criterios. Las referencias y licencias consultadas están en [REFERENCIAS.md](REFERENCIAS.md).
+
+### Barra lateral
+
+- **Contenido:** Search, los módulos (Overview, Projects, Tasks, Resources, Favorites, Settings) y dos secciones plegables:
+  - **Favorites:** las vistas de tareas marcadas con estrella;
+  - **Projects:** los proyectos activos, con un punto de estado. El **+** crea un proyecto.
+- **Elemento activo:** el módulo y el proyecto abiertos aparecen marcados.
+- **Plegar:** con «<<» (aparece al pasar el cursor) o con **Ctrl + \**. Para mostrarla otra vez, usa el botón de la cabecera o el mismo atajo.
+- **Ancho:**
+  - arrastra el borde derecho (entre 200 y 360 px);
+  - con el foco en el borde, usa ← / → (±10 px), Home (mínimo) y End (máximo);
+  - doble clic vuelve a 244 px.
+- **Ventana estrecha (menos de 900 px):** la barra se convierte en un panel que se abre con el botón de la cabecera. Se cierra con Esc, al hacer clic fuera o al elegir un destino.
+- El ancho y el estado plegado se guardan en esta computadora.
+
+### Cabecera
+
+Muestra dónde estás, por ejemplo *Projects / AZ-2401 Riverside Medical Centre / Tasks*. Cada parte anterior es un enlace. En Tasks aparece la vista activa y, en Settings, la pestaña.
+
+### Búsqueda rápida (Ctrl + K)
+
+1. Abre la búsqueda con **Ctrl + K**, con **Search** en la barra lateral o en la cabecera.
+2. Escribe palabras en cualquier orden. La búsqueda ignora mayúsculas y acentos.
+3. Recorre los resultados con ↑ / ↓ y abre uno con **Enter**. **Esc** cierra la búsqueda.
+
+Los resultados se agrupan en módulos, proyectos (código, nombre o cliente), vistas guardadas, entregables y tareas. Una tarea se abre en el panel lateral, dentro de su proyecto. Un entregable abre su panel en la pestaña Deliverables.
+
+### Panel de tarea: anterior / siguiente
+
+Con una tarea abierta en el panel, los botones ↑ ↓ de la barra del panel o **Alt + ↑ / Alt + ↓** pasan a la tarea anterior o siguiente. Siguen el orden que ves en la lista, con sus filtros, orden y grupos.
+
+- El contador (por ejemplo *3/11*) indica la posición en la lista.
+- Esc cierra el panel y devuelve el foco a la fila.
+- Los cambios se guardan en los mismos datos que usa el resto de Flowlace.
+
+### Agrupar en la tabla
+
+En Tasks, en el diseño **Table**, **Group by** agrupa por Status, Assignee, Project, Phase o Deliverable. Antes solo era posible en Board y List.
+
+- Cada grupo muestra cuántas tareas tiene y se pliega desde su título, con el ratón o con Enter.
+- La agrupación forma parte de la vista: se guarda con **Save view** o **Save as new view**, igual que los filtros y el orden. Como el resto de las vistas, es personal.
+- Los grupos plegados se guardan con la vista y se mantienen al volver a la pantalla o reiniciar.
+- Cada proyecto conserva su propia configuración.
+- Las vistas creadas antes de 1.8 se abren sin agrupar, como antes. La migración solo añade el valor «sin agrupar».
+
+### Tablas y workflow
+
+- **Tablas:**
+  - filas de una línea y encabezados discretos;
+  - el estado se muestra como etiqueta de color y sigue siendo editable;
+  - una tarea atrasada muestra la fecha en rojo con «!»;
+  - el botón **Open** aparece al pasar el cursor o con el foco. Con pantallas táctiles queda siempre visible.
+- **Workflow:** la barra del diagrama agrupa las herramientas en historial, distribución, herramientas, vista y zoom, separados. Conserva todas las opciones.
+
+## 11. Qué se comprobó en esta entrega
 
 Se ejecutó todo en Linux (Ubuntu 24.04) con Electron 43.7.7 real, en pantalla virtual, y Flowlace Server en Node.js. Los resultados:
 

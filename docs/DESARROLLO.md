@@ -95,6 +95,38 @@ xvfb-run -a npm run test:ui      # Electron real con Playwright: local (13), fun
 
 En Windows, `npm run test:ui` funciona sin `xvfb-run`.
 
+`test/e2e/ui-shell.js` comprueba la interfaz de la 1.8:
+
+- barra lateral, breadcrumbs y búsqueda Ctrl+K;
+- anterior y siguiente en el panel;
+- grupos en la tabla;
+- ventana estrecha, teclado, contraste y modo oscuro.
+
+Los escenarios anteriores miden el diagrama con todo el ancho de la ventana. Por eso se ejecutan con la barra lateral plegada (`helpers.opts.keepSidebar`).
+
+Capturas de las pantallas principales (no es una prueba):
+
+```bash
+FLOWLACE_SHOTS=/ruta/capturas xvfb-run -a node test/e2e/screens.js prefijo
+```
+
+### Estilos
+
+Los valores compartidos están en `src/renderer/styles/01-base.css`, para claro y oscuro:
+
+- colores (`--bg`, `--side`, `--hover`, `--line`, `--fg`, `--muted`, `--accent`…);
+- tipografía (`--f-body`, `--fs-*`);
+- espaciado (`--sp-*`);
+- alturas de control (`--h-ctl`, `--h-row`);
+- radios (`--r*`) y sombras.
+
+El resto de archivos usa estas variables:
+
+- `02-shell.css`: la estructura (barra lateral, cabecera, búsqueda);
+- `16-system.css`: el estilo de pestañas, barra de vista, tablas, panel, menús, diálogos y barra del workflow.
+
+La lógica de la estructura está en `src/renderer/app/14a-shell.js`.
+
 Los escenarios de interfaz usan perfiles y carpetas temporales. El perfil se indica con la variable `FLOWLACE_USER_DATA`, que solo se acepta en la app sin empaquetar. Las respuestas de los diálogos de Windows (elegir carpeta o archivo) las da la prueba desde el proceso principal.
 
 ## Seguridad de Electron

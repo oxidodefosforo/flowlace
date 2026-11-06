@@ -1,9 +1,5 @@
 /* Flowlace UI module (part of the renderer IIFE; concatenated in file-name order by scripts/build-renderer.js). */
 /* ---------- render ---------- */
-function shellTop(){
-  const v=ui.view==='project'?'projects':ui.view;const nb=(id,l)=>`<button data-act="nav" data-to="${id}"${v===id?' aria-current="page"':''}>${l}</button>`;
-  return `${brandHTML()}<nav class="nav" aria-label="Main">${nb('overview','Overview')}${nb('projects','Projects')}${nb('tasks','Tasks')}${nb('resources','Resources')}${nb('favorites','Favorites')}${nb('settings','Settings')}</nav><span class="spacer"></span>${themeBtn()}${saveIndHTML()}<button class="btn primary sm newp" data-act="new-project">+ New project</button>`;
-}
 function render(){
   if(!S)return;   // desktop: nothing to draw until a workspace is loaded
   const ae=document.activeElement,fid=ae&&ae.id&&app.contains(ae)?ae.id:null;let sel=null;
@@ -14,10 +10,11 @@ function render(){
   const panelHTML=renderPanel();
   document.getElementById('ws').classList.toggle('has-panel',!!ui.panel);
   const pn=document.getElementById('panel');pn.hidden=!ui.panel;pn.innerHTML=panelHTML;
-  document.getElementById('top').innerHTML=shellTop();
+  renderShell();
   let inner;
   if(ui.view==='project')inner=renderProject();else if(ui.view==='projects')inner=renderProjects();else if(ui.view==='tasks')inner=renderTasksPage();else if(ui.view==='favorites')inner=renderFavorites();else if(ui.view==='resources')inner=renderResources();else if(ui.view==='settings')inner=renderSettings();else inner=renderOverview();
   main.innerHTML=(storageOK?'':`<div class="banner bad"><b>Browser storage is unavailable.</b> Changes will be lost when this page closes. Use Settings → Export backup to keep a copy.</div>`)+inner;
+  {const sl=document.getElementById('pn-step-slot');if(sl)sl.outerHTML=panelStepHTML()}
   if(ui.resetScroll){main.scrollTop=0;ui.resetScroll=false}else{main.scrollTop=ms;const rw=document.getElementById('rs-wrap');if(rw&&rwS){rw.scrollLeft=rwS[0];rw.scrollTop=rwS[1]}}
   ui._pk=panelKey();const pb2=document.getElementById('pn-body');if(pb2&&pk===ui._pk)pb2.scrollTop=ps;
   const navTo=ui.navFocus;ui.navFocus=null;const target=ui.focusAfter||(navTo?null:fid);ui.focusAfter=null;

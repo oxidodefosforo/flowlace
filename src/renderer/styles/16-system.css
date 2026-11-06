@@ -1,0 +1,161 @@
+/* Flowlace renderer styles — v1.8 visual system (Notion-inspired) applied to the existing components.
+   Neutral surfaces, sentence-case labels, thin separators, hover states in --hover, colour only for meaning. */
+
+/* ---------- headings and labels: sentence case instead of letter-spaced capitals ---------- */
+.people .lab,.vtab .lt,.legend-pop h3,.pn-kind,.tl-head .lab,.card-sec h3,.panelbox h3{text-transform:none;letter-spacing:0}
+.vtab .lt{font-size:11px;font-weight:500;color:var(--faint)}
+.pn-kind{font-size:12px;font-weight:500}
+
+/* ---------- tabs (project, settings) and saved-view tabs ---------- */
+.tabs{gap:4px;margin-bottom:16px}
+.tabs button{padding:6px 8px 8px;font-size:14px;border-radius:var(--r-sm) var(--r-sm) 0 0;color:var(--muted)}
+.tabs button:hover{color:var(--fg);background:var(--hover)}
+.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--fg)}
+.vtabs{gap:2px;margin-bottom:6px}
+.vtab{height:32px;padding:0 8px;border-radius:var(--r-sm) var(--r-sm) 0 0;font-size:13.5px}
+.vtab:hover{background:var(--hover)}
+.vtab[aria-selected="true"]{border-bottom-color:var(--fg)}
+.vtab.add{color:var(--muted);font-weight:500}
+.vtab.add:hover{color:var(--fg)}
+.vtabs .star{color:var(--muted)}
+
+/* ---------- view bar: layout, group, sort, fields, filters in one compact row ---------- */
+.toolbar.tb-meta{gap:4px;padding:4px 0 8px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+.toolbar.tb-meta>.btn,.toolbar .ftog{border-color:transparent;background:none;color:var(--muted);font-weight:500}
+.toolbar.tb-meta>.btn:hover,.toolbar .ftog:hover{background:var(--hover);color:var(--fg)}
+.toolbar.tb-meta>.btn[aria-expanded="true"],.toolbar .ftog[aria-expanded="true"]{background:var(--hover);color:var(--fg)}
+.ftog.fon{color:var(--accent-t)!important;background:var(--accent-soft)!important}
+.fcnt{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--accent);color:var(--accent-fg);font-size:10.5px;font-weight:600}
+.toolbar.tb-meta .flabel{color:var(--muted);font-size:13px}
+.toolbar.tb-meta .flabel select.in{height:var(--h-ctl-sm);border-color:transparent;background:var(--hover);font-size:13px;padding:0 4px 0 6px}
+.toolbar.tb-meta .chk{color:var(--muted);font-size:13px;padding:0 4px}
+.tmeta{display:flex;flex-direction:row;align-items:center;gap:8px;margin-left:auto}
+.filters{padding:8px 0;margin-bottom:6px;gap:6px}
+.filters .in{height:var(--h-ctl-sm);font-size:13px;background:var(--surface)}
+.filters .dfield{height:var(--h-ctl-sm)}
+.filters .on{border-color:color-mix(in srgb,var(--accent) 55%,transparent);box-shadow:none;background:var(--accent-soft);color:var(--accent-t)}
+.dirty{border:0;border-radius:var(--r);background:var(--warn-soft);border-left:3px solid var(--warn)}
+
+/* ---------- tables: database-like rows ---------- */
+.twrap{border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+.tbl th{font-size:12.5px;letter-spacing:0;text-transform:none;font-weight:500;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line);background:var(--surface)}
+.tbl th+th,.tbl td+td{border-left:1px solid var(--line)}
+.tbl td{padding:2px 6px;height:var(--h-row);font-size:13.5px}
+.tbl tbody tr:hover td{background:var(--hover)}
+.tbl tbody tr.trow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tbl tbody tr.trow:focus-visible td{background:var(--accent-soft)}
+.tbl tr.sel td{background:var(--accent-soft)!important}
+.tbl tr.r-over td:first-child{box-shadow:inset 2px 0 0 var(--danger)}
+.tbl.edit input:not([type=date]):not([type=checkbox]),.tbl.edit select{height:28px;border-radius:var(--r-sm);font-size:13.5px}
+.tbl.edit input:not([type=date]):not([type=checkbox]):hover,.tbl.edit select:hover{border-color:transparent;background:var(--hover-2)}
+.tbl.edit .dfield:hover{border-color:transparent;background:var(--hover-2)}
+.pcell{flex-direction:row;align-items:baseline;gap:6px;min-width:0;white-space:nowrap}
+.pcell .code{flex:none;font-family:var(--f-mono);font-size:11.5px}
+.pcell>button,.pcell>b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbl .due-c{display:flex;flex-wrap:nowrap;align-items:center;gap:4px;white-space:nowrap}
+.newrow td{background:var(--surface)}
+.newrow .nr .in{border-color:transparent;background:none}
+.newrow .nr .in:hover{background:var(--hover)}
+.newrow .nr .in:focus{background:var(--surface);border-color:var(--accent)}
+.newrow .nr select.in{border-color:transparent!important;background:var(--hover)!important;min-width:0}
+.openb{color:var(--muted);border-radius:var(--r-sm)}
+.openb:hover,.openb:focus-visible{background:var(--hover-2);border-color:transparent}
+@media (hover:hover){.tbl tr.trow:not(:hover):not(:focus-within):not(.sel) .openb{opacity:0}}
+/* group header rows in the table */
+.tbl tr.tgrp td{height:36px;padding:8px 6px 2px;background:var(--surface)!important;border-left:0}
+.tg-btn{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 8px 0 4px;border:0;border-radius:var(--r-sm);background:none;cursor:pointer;font-weight:600;font-size:13.5px;color:var(--fg)}
+.tg-btn:hover{background:var(--hover)}
+.tg-btn .car{display:inline-grid;color:var(--muted);transition:transform .12s}
+.tg-btn[aria-expanded="true"] .car{transform:rotate(90deg)}
+.tg-n{color:var(--muted);font-weight:400;font-variant-numeric:tabular-nums}
+/* status properties as soft pills (colour = meaning) */
+.st-sel{border-radius:var(--r-sm);border-color:transparent;background:var(--surface-3)}
+.bulk{border-radius:var(--r);background:var(--accent-soft);color:var(--fg)}
+.lgroup{border-radius:var(--r)}
+.lgroup>.lh{background:var(--surface);font-size:13.5px}
+.lrow:hover{background:var(--hover)}
+.bcol{background:var(--surface-2);border-radius:var(--r)}
+.card{border-radius:var(--r);box-shadow:0 1px 2px rgba(15,15,15,.06)}
+.card:hover{background:var(--surface-2)}
+.empty{border:1px dashed var(--line-2);border-radius:var(--r-lg);background:none}
+.empty h2{font-size:15px}
+
+/* ---------- details panel: side peek ---------- */
+#panel{border-left:1px solid var(--line);box-shadow:var(--panel-shadow)}
+.pn-head{padding:8px 20px 14px;border-bottom:0;gap:4px}
+.pn-bar{gap:4px}
+.pn-title{font-size:24px;font-weight:700;line-height:1.25;letter-spacing:-.01em;margin-top:6px}
+.pn-close{border-color:transparent;background:none;color:var(--muted)}
+.pn-close:hover{background:var(--hover);color:var(--fg)}
+.pn-bar .more-btn{border-color:transparent;background:none;color:var(--muted)}
+.pn-bar .more-btn:hover{background:var(--hover)}
+.pn-step{display:inline-flex;align-items:center;gap:0;margin-right:2px}
+.pn-pos{font-size:12px;color:var(--muted);min-width:34px;text-align:center}
+.pn-body{padding:4px 20px 32px}
+#panel .fgrid{gap:2px 14px}
+#panel .fld{padding:4px 0}
+#panel .fld>.lb{font-size:12.5px}
+#panel .fld .in:not(textarea),#panel .fld .dfield{border-color:transparent;background:transparent;padding-left:6px}
+#panel .fld .in:not(textarea):hover,#panel .fld .dfield:hover{background:var(--hover)}
+#panel .fld .in:not(textarea):focus,#panel .fld .dfield:focus-within{background:var(--surface);border-color:var(--accent)}
+#panel .fld textarea.in{background:var(--surface-2);border-color:transparent}
+#panel .fld textarea.in:focus{background:var(--surface);border-color:var(--accent)}
+.pn-actions{border-top:1px solid var(--line)}
+.crumbs button{color:var(--muted)}
+.crumbs button:hover{color:var(--fg);background:var(--hover)}
+
+/* ---------- menus, context menus, modals, tooltips ---------- */
+.menu,.ctxm{border:0;border-radius:var(--r-lg);box-shadow:var(--shadow);padding:4px}
+.menu button,.ctxm button{padding:6px 10px;border-radius:var(--r-sm);font-size:13.5px}
+.menu button:hover,.menu button:focus-visible,.ctxm button:hover,.ctxm button:focus-visible{background:var(--hover)}
+.more-btn{color:var(--fg-2)}
+.mb{background:rgba(15,15,15,.45)}
+.modal{border-radius:12px;padding:20px}
+.x:hover{background:var(--hover)}
+#tip{border-radius:var(--r);font-size:12.5px}
+.toast{border-radius:var(--r);background:#2F2F2F;color:#F1F1EF}
+.toast.err{background:var(--danger)}
+
+/* ---------- cards and section boxes ---------- */
+.card-sec,.panelbox,.favrow,.advsum,.adv,.cfgbox{border-color:var(--line);border-radius:var(--r-lg)}
+.favrow:hover{background:var(--hover)}
+.kstrip .ks{padding:10px 14px}
+
+/* ---------- workflow canvas toolbar: grouped, compact (tools · history · layout · view · zoom) ---------- */
+.wflay-bar{gap:4px!important;padding:6px 8px!important;border:1px solid var(--line)!important;border-radius:var(--r-lg)!important;background:var(--surface)!important;box-shadow:0 1px 2px rgba(15,15,15,.05)}
+.wflay-bar>.btn.sm:not(.primary),.wflay-bar .wfzoom .btn.sm:not(.primary),.wflay-bar .wftool .btn.sm:not(.primary){border-color:transparent;background:none;color:var(--fg-2)}
+.wflay-bar>.btn.sm:not(.primary):hover:not(:disabled),.wflay-bar .wfzoom .btn.sm:hover:not(:disabled),.wflay-bar .wftool .btn.sm:not(.primary):hover{background:var(--hover)}
+.wflay-bar .wftool{background:var(--surface-3);padding:2px;border-radius:var(--r);gap:2px}
+.wflay-bar .wftool .btn.sm{height:22px}
+.wflay-bar .wftool .btn.sm.primary{background:var(--surface);color:var(--fg);border-color:transparent;box-shadow:0 1px 2px rgba(15,15,15,.12),0 0 0 1px var(--line)}
+.wflay-bar .tsep{height:18px;background:var(--line);margin:0 2px}
+.wflay-bar .chk{font-size:13px;color:var(--fg-2)}
+.wflay-ctx{border-top:1px solid var(--line)!important;margin-top:4px!important;padding-top:6px!important}
+
+/* ---------- narrow windows ---------- */
+@media (max-width:899.98px){
+  .crumbs-top .bc{max-width:180px}
+  .top-search span{display:none}
+  .pn-head{padding:8px 14px 10px}.pn-body{padding:4px 14px 28px}
+}
+@media (max-width:640px){
+  #main{padding-left:12px;padding-right:12px}
+  .crumbs-top .bc:not(.cur){max-width:110px}
+  .toolbar.tb-meta{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:thin}
+  .toolbar.tb-meta>*{flex:none}
+  .tmeta{margin-left:0}
+}
+
+/* status pills in the table (the select keeps keyboard and touch editing) */
+.tbl.edit select.st-pill{width:auto;max-width:100%;height:24px;padding:0 6px;border-radius:var(--r-sm);font-size:13px;background:var(--surface-3);color:var(--fg-2)}
+.tbl.edit select.st-pill[data-st="In progress"]{background:var(--accent-soft);color:var(--accent-t)}
+.tbl.edit select.st-pill[data-st="Waiting information"]{background:var(--warn-soft);color:var(--warn)}
+.tbl.edit select.st-pill[data-st="QA"]{background:var(--qa-soft);color:var(--qa)}
+.tbl.edit select.st-pill[data-st="Done"]{background:var(--ok-soft);color:var(--ok)}
+.tbl.edit select.st-pill:hover{filter:brightness(.97)}
+.tbl.edit select.st-pill option{background:var(--surface);color:var(--fg)}
+.sd-item>span.sd-dot{flex:none}
+.tbl td.is-over .dfield .dtxt{color:var(--danger);font-weight:500}
+.od-b{height:18px;padding:0 5px;font-size:11.5px}
+.od-b .od-t{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@media (min-width:1500px){.od-b .od-t{position:static;width:auto;height:auto;clip-path:none}}

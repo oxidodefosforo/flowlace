@@ -9,11 +9,6 @@
 }
 @media (max-width:700px){
   :root{--labelw:170px}
-  .brand>span:not(.mark),.save-ind span{display:none}
-  .top{gap:6px}
-  .nav{min-width:0;overflow-x:auto}
-  .nav button{padding:0 6px;font-size:12.5px}
-  .top .newp{display:none}
   .tlx{overflow-x:auto}
   .tlx .tl{min-width:640px}
   .tl-head{top:0}

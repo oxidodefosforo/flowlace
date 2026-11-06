@@ -1,40 +1,52 @@
 /* Flowlace renderer styles — extracted from the web build; edit here. */
 /* Layout: thin title bar; split workspace = scrollable work area (left) + right details panel (~50%) with independent scroll */
 :root{
-  --bg:#F3F4F7; --surface:#FFFFFF; --surface-2:#F1F3F6; --surface-3:#E6E9EE; --line:#E0E4EA; --line-2:#C9D0DA;
-  --fg:#16202C; --fg-2:#3A4555; --muted:#667085; --accent:#1F5FAD; --accent-soft:#E7EEF8; --accent-fg:#FFFFFF;
-  --danger:#C2362B; --danger-soft:#FCE8E6; --ok:#287548; --ok-soft:#E2F1E7; --warn:#935E00; --warn-soft:#FBF0D9;
-  --weekend:rgba(22,32,44,.035); --today:#1F5FAD; --shadow:0 12px 32px rgba(16,24,40,.18); --panel-shadow:-10px 0 28px rgba(16,24,40,.07);
-  --f-display:'IBM Plex Sans Condensed','Arial Narrow',system-ui,sans-serif;
-  --f-body:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
-  --labelw:310px; --r:6px; --toph:50px;
+  /* Neutral, Notion-like base: white page, warm grey sidebar, thin separators; colour only for states, priorities,
+     phases / disciplines and the main action. Shared by every module (light + dark). */
+  --bg:#FFFFFF; --surface:#FFFFFF; --surface-2:#F7F7F5; --surface-3:#EFEFED; --side:#F7F7F5; --hover:rgba(55,53,47,.06); --hover-2:rgba(55,53,47,.1);
+  --line:#EDEDEB; --line-2:#DCDCD9; --fg:#37352F; --fg-2:#4F4D48; --muted:#73726E; --faint:#A3A29E;
+  --accent:#1D6FCF; --accent-soft:#E8F1FB; --accent-fg:#FFFFFF; --accent-t:#185CAD; --qa:#6B3FC4; --qa-soft:#F1ECFB;
+  --danger:#C4413A; --danger-soft:#FDEBEA; --ok:#2B7A57; --ok-soft:#E8F3EC; --warn:#9A5B00; --warn-soft:#FBF1DC;
+  --weekend:rgba(55,53,47,.03); --today:#1D6FCF;
+  --shadow:0 0 0 1px rgba(15,15,15,.05),0 3px 6px rgba(15,15,15,.08),0 9px 24px rgba(15,15,15,.14); --panel-shadow:-1px 0 0 rgba(15,15,15,.04),-8px 0 24px rgba(15,15,15,.05);
+  --f-display:'Segoe UI Variable Display','Segoe UI',-apple-system,BlinkMacSystemFont,'IBM Plex Sans',system-ui,sans-serif;
+  --f-body:'Segoe UI Variable Text','Segoe UI',-apple-system,BlinkMacSystemFont,'IBM Plex Sans',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+  /* sizes: 4px spacing scale, control heights, radius */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px;
+  --h-ctl:30px; --h-ctl-sm:26px; --h-row:34px; --r:6px; --r-sm:4px; --r-lg:8px;
+  --fs-xs:11.5px; --fs-sm:12.5px; --fs:14px; --fs-h1:26px; --fs-h2:16px;
+  --labelw:310px; --toph:44px; --sidew:244px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0F141B; --surface:#161C25; --surface-2:#1C2430; --surface-3:#242E3B; --line:#28323F; --line-2:#3A4656;
-  --fg:#E5E9EF; --fg-2:#C3CAD5; --muted:#94A0B1; --accent:#70A4E8; --accent-soft:#1B2A3E; --accent-fg:#0F141B;
-  --danger:#F0766B; --danger-soft:#3A1E1D; --ok:#6CC08B; --ok-soft:#183024; --warn:#E3AA4E; --warn-soft:#33270F;
-  --weekend:rgba(255,255,255,.025); --today:#70A4E8; --shadow:0 12px 32px rgba(0,0,0,.5); --panel-shadow:-10px 0 28px rgba(0,0,0,.35); color-scheme:dark}}
+  --bg:#191919; --surface:#191919; --surface-2:#202020; --surface-3:#2A2A2A; --side:#202020; --hover:rgba(255,255,255,.055); --hover-2:rgba(255,255,255,.09);
+  --line:#2C2C2C; --line-2:#3A3A3A; --fg:#D4D4D4; --fg-2:#BDBDBB; --muted:#9B9B9B; --faint:#6E6E6E;
+  --accent:#4A9BE8; --accent-soft:#1E2C3B; --accent-fg:#FFFFFF; --accent-t:#7DB7F0; --qa:#B9A0F0; --qa-soft:#2A2340;
+  --danger:#EB6F67; --danger-soft:#3A201F; --ok:#5FB98A; --ok-soft:#1B2E24; --warn:#E0A54A; --warn-soft:#352812;
+  --weekend:rgba(255,255,255,.025); --today:#4A9BE8; --shadow:0 0 0 1px rgba(255,255,255,.07),0 3px 6px rgba(0,0,0,.3),0 9px 24px rgba(0,0,0,.45); --panel-shadow:-1px 0 0 rgba(255,255,255,.04),-8px 0 24px rgba(0,0,0,.35); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0F141B; --surface:#161C25; --surface-2:#1C2430; --surface-3:#242E3B; --line:#28323F; --line-2:#3A4656;
-  --fg:#E5E9EF; --fg-2:#C3CAD5; --muted:#94A0B1; --accent:#70A4E8; --accent-soft:#1B2A3E; --accent-fg:#0F141B;
-  --danger:#F0766B; --danger-soft:#3A1E1D; --ok:#6CC08B; --ok-soft:#183024; --warn:#E3AA4E; --warn-soft:#33270F;
-  --weekend:rgba(255,255,255,.025); --today:#70A4E8; --shadow:0 12px 32px rgba(0,0,0,.5); --panel-shadow:-10px 0 28px rgba(0,0,0,.35); color-scheme:dark}
+  --bg:#191919; --surface:#191919; --surface-2:#202020; --surface-3:#2A2A2A; --side:#202020; --hover:rgba(255,255,255,.055); --hover-2:rgba(255,255,255,.09);
+  --line:#2C2C2C; --line-2:#3A3A3A; --fg:#D4D4D4; --fg-2:#BDBDBB; --muted:#9B9B9B; --faint:#6E6E6E;
+  --accent:#4A9BE8; --accent-soft:#1E2C3B; --accent-fg:#FFFFFF; --accent-t:#7DB7F0; --qa:#B9A0F0; --qa-soft:#2A2340;
+  --danger:#EB6F67; --danger-soft:#3A201F; --ok:#5FB98A; --ok-soft:#1B2E24; --warn:#E0A54A; --warn-soft:#352812;
+  --weekend:rgba(255,255,255,.025); --today:#4A9BE8; --shadow:0 0 0 1px rgba(255,255,255,.07),0 3px 6px rgba(0,0,0,.3),0 9px 24px rgba(0,0,0,.45); --panel-shadow:-1px 0 0 rgba(255,255,255,.04),-8px 0 24px rgba(0,0,0,.35); color-scheme:dark}
 [hidden]{display:none!important}
 html,body{height:100%}
-body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:13.5px;line-height:1.45;overflow:hidden}
+body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:var(--fs);line-height:1.5;overflow:hidden;-webkit-font-smoothing:antialiased}
 *{box-sizing:border-box}
 button,input,select,textarea{font:inherit;color:inherit}
 h1,h2,h3{font-family:var(--f-display);font-weight:600;margin:0;text-wrap:balance}
-h1{font-size:21px;line-height:1.2}
-h2{font-size:16px}
-h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+h1{font-size:var(--fs-h1);line-height:1.2;font-weight:700;letter-spacing:-.01em}
+h2{font-size:var(--fs-h2)}
+h3{font-size:12px;letter-spacing:.01em;color:var(--muted);font-weight:600}
 p{margin:0}
 a{color:var(--accent)}
 .muted{color:var(--muted)}
 .mono,.code{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 .num{font-variant-numeric:tabular-nums}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm)}
+kbd{display:inline-flex;align-items:center;height:18px;padding:0 5px;border:1px solid var(--line-2);border-bottom-width:2px;border-radius:4px;font:500 10.5px/1 var(--f-body);color:var(--muted);background:var(--surface);white-space:nowrap}
 .sr{position:absolute;left:0;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
 .spacer{flex:1}
 

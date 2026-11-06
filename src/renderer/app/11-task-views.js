@@ -22,9 +22,9 @@ const TCOLS={project:'Project',deliverable:'Deliverable',assignee:'Assignee',sta
 const GROUPS={status:'Status',assignee:'Assignee',project:'Project',phase:'Phase',deliverable:'Deliverable',none:'No grouping'};
 const LAYOUTS={table:'Table',board:'Board',list:'List',calendar:'Calendar'};
 const clone=o=>JSON.parse(JSON.stringify(o));
-function defaultCfg(pid){return {layout:'table',filters:{mode:'simple',join:'and',groups:[{join:'and',rules:[]}]},sort:[{field:'due',dir:'asc'},{field:'priority',dir:'desc'}],group:pid?'deliverable':'status',columns:pid?['deliverable','assignee','status','due']:['project','deliverable','assignee','status','due'],showDone:false,includeArchived:false}}
-const CFG_KEYS=['layout','filters','sort','group','columns','showDone','includeArchived'];
-const cfgOf=v=>{const o={};CFG_KEYS.forEach(k=>o[k]=clone(v[k]));return o};
+function defaultCfg(pid){return {layout:'table',filters:{mode:'simple',join:'and',groups:[{join:'and',rules:[]}]},sort:[{field:'due',dir:'asc'},{field:'priority',dir:'desc'}],group:pid?'deliverable':'status',columns:pid?['deliverable','assignee','status','due']:['project','deliverable','assignee','status','due'],showDone:false,includeArchived:false,tgroup:'none'}}
+const CFG_KEYS=['layout','filters','sort','group','columns','showDone','includeArchived','tgroup'];
+const cfgOf=v=>{const o={};CFG_KEYS.forEach(k=>{if(v[k]!==undefined)o[k]=clone(v[k])});return o};
 function normCfg(c,pid){
   const d=defaultCfg(pid),o={};
   o.layout=LAYOUTS[c.layout]?c.layout:d.layout;
@@ -36,6 +36,8 @@ function normCfg(c,pid){
   o.columns=arr(c.columns).filter((x,i,a)=>TCOLS[x]&&a.indexOf(x)===i&&!(pid&&x==='project'));
   if(!Array.isArray(c.columns))o.columns=d.columns;
   o.showDone=!!c.showDone;o.includeArchived=!pid&&!!c.includeArchived;
+  // v1.8: grouping in the Table layout (older views have none: shown ungrouped, as before)
+  o.tgroup=GROUPS[c.tgroup]&&!(pid&&c.tgroup==='project')?c.tgroup:'none';
   return o;
 }
 /* evaluation (relative dates are recalculated every time) */
@@ -99,7 +101,7 @@ function cfgSummary(cfg){
   if(!gs.length)s='No filters';
   else if(gs.length===1)s=gs[0].rules.map(ruleText).join(gs[0].join==='or'?' or ':' · ');
   else s=gs.map(g=>'('+g.rules.map(ruleText).join(g.join==='or'?' or ':' and ')+')').join(cfg.filters.join==='or'?' or ':' and ');
-  return s+(cfg.showDone?' · Done shown':'');
+  return s+(cfg.showDone?' · Done shown':'')+(cfg.layout==='table'&&cfg.tgroup&&cfg.tgroup!=='none'?` · grouped by ${GROUPS[cfg.tgroup].toLowerCase()}`:'');
 }
 /* references to deleted items: flagged, never removed silently */
 function cfgIssues(cfg,pid){
