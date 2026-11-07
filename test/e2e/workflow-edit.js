@@ -308,7 +308,8 @@ module.exports = async function run() {
     await w.click('[data-wflay=edit]');
   });
 
-  await step('8 · “Add prerequisite…” from the diagram uses the same picker, including other phases', async () => {
+  await step('8 · “Add prerequisite…” from the diagram uses the same picker, including other phases; since 1.10 nothing moves', async () => {
+    const before = await allPos();
     await w.click('#wfn-me-in1'); await H.sleep(200);
     await w.click('[data-wflay=prereq]');
     await H.until(() => w.evaluate(() => !!document.querySelector('#wffloat .wfdp')), 3000, 'dialog');
@@ -317,7 +318,10 @@ module.exports = async function run() {
     assert.ok(rec(records(dbFile), 'workflowDraft').steps.find(s => s.id === 'me-in1').deps.includes('fee-co-out'));
     assert.ok(/Send architectural layouts/.test(await w.textContent('#wffloat .wfdp-sel')));
     await w.click('#wffloat .wff-f [data-wff-close]');
-    await checkOrder('after adding dependencies');
+    /* 1.10: editing dependencies keeps the drawing — every block stays; the new reference gets a free place */
+    const after = await allPos();
+    for (const [id, p] of Object.entries(before)) assert.deepStrictEqual(after[id], p, 'after adding dependencies: ' + id + ' stays');
+    assert.ok(after['fee-co-out'], 'the prerequisite of the other phase is shown as a reference');
   });
 
   await step('1b · People still works after dragging, editing arrows and a press that never ended in the diagram', async () => {

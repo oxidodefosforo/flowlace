@@ -190,8 +190,14 @@ table.ppl td{vertical-align:top}
 .wfg.seg{background:none}
 .wfg.seg.v{border-left:1px dashed var(--accent)}
 .wfg.seg.h{border-top:1px dashed var(--accent)}
-.wfend{fill:var(--accent);stroke:var(--surface);stroke-width:2;pointer-events:all;cursor:move}
-.wfend.b{fill:var(--surface);stroke:var(--accent)}
+/* arrow ends: a visible dot and a larger transparent hit area (constant on screen), in the layer above the cards */
+.wfsvg-top{pointer-events:none;z-index:3}
+.wfsvg-top .wfh,.wfsvg-top .wfend,.wfsvg-top .wfend-hit{pointer-events:all}
+.wfend{cursor:move}
+.wfend-hit{fill:transparent;stroke:none}
+.wfend-dot{fill:var(--accent);stroke:var(--surface);stroke-width:2;pointer-events:all}
+.wfend.b .wfend-dot{fill:var(--surface);stroke:var(--accent)}
+.wfend:hover .wfend-dot{stroke-width:3}
 .wfside{stroke:var(--accent);stroke-width:4;stroke-linecap:round;opacity:.5}
 .wfe.conf{stroke:var(--danger);stroke-dasharray:6 3}
 .wfe-hc{fill:var(--danger)}

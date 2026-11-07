@@ -13,8 +13,8 @@ module.exports = function wfTools(getW) {
   const vert = P => P.slice(0, -1).map((p, i) => [p, P[i + 1]]).filter(([a, b]) => a[0] === b[0] && a[1] !== b[1]).map(([a, b]) => ({ x: a[0], y1: a[1], y2: b[1] }));
   const horz = P => P.slice(0, -1).map((p, i) => [p, P[i + 1]]).filter(([a, b]) => a[1] === b[1] && a[0] !== b[0]).map(([a, b]) => ({ y: a[1], x1: a[0], x2: b[0] }));
   const near = (v, a) => Math.abs(v - a) <= 3, inR = (v, a, l) => v >= a - 1 && v <= a + l + 1;   // the arrow tip stops 2 px before the side
-  const sideOf = (q, b) => { const x = q[0] - b.x, y = q[1] - b.y; if (x < -4 || x > W + 4 || y < -4 || y > HB + 4) return null;   // slanted, rhombus and wavy outlines included
-    return y <= 3 ? 't' : y >= HB - 9 && x > 12 && x < W - 12 ? 'b' : x <= 15 ? 'l' : x >= W - 15 ? 'r' : null; };
+  const sideOf = (q, b) => { const x = q[0] - b.x, y = q[1] - b.y; if (x < -4 || x > W + 4 || y < -4 || y > HB + 4) return null;   // slanted, rhombus and wavy outlines included (the document wave rises up to ~14 px)
+    return y <= 3 ? 't' : y >= HB - 16 && x > 12 && x < W - 12 ? 'b' : x <= 15 ? 'l' : x >= W - 15 ? 'r' : null; };
   async function attached(k) { const [a, b] = k.split('>'), P = await pts(k), A = await box(a), B = await box(b); return { a: sideOf(P[0], A), b: sideOf(P[P.length - 1], B), P }; }
   const picked = () => w.evaluate(() => { const p = document.querySelector('path.wfe.on'); return p && p.dataset.k; });
   const zoom = () => w.evaluate(() => { const d = document.querySelector('.wfd'); return d.getBoundingClientRect().width / d.offsetWidth; });
@@ -34,6 +34,10 @@ module.exports = function wfTools(getW) {
     const c = await w.evaluate(({ list, k }) => { const d = document.querySelector('.wfd'), wr = document.querySelector('.wfd-wrap');
       const at = ({ x, y }) => { const r = d.getBoundingClientRect(), z = r.width / d.offsetWidth; return { x: r.left + x * z, y: r.top + y * z }; };
       const bar = document.querySelector('.wflay-bar'), top = Math.max(60, bar ? bar.getBoundingClientRect().bottom + 10 : 0);
+      /* first choice: a point where only this line passes (no overlap to cycle through, no handle on top) */
+      for (const p of list) { const s = at(p), wb = wr.getBoundingClientRect(); if (s.x < wb.left + 20 || s.x > wb.right - 20 || s.y < Math.max(top, wb.top + 20) || s.y > Math.min(innerHeight - 40, wb.bottom - 20)) continue;
+        const e = document.elementFromPoint(s.x, s.y), u = document.elementsFromPoint(s.x, s.y).filter(x => x.classList && x.classList.contains('wfe-hit')).map(x => x.dataset.wfe);
+        if (e && e.classList && e.classList.contains('wfe-hit') && u.length === 1 && u[0] === k) return s; }
       for (const p of list) {
         let s = at(p); const wb = wr.getBoundingClientRect();
         if (s.x < wb.left + 20 || s.x > wb.right - 20) wr.scrollLeft += s.x - (wb.left + wb.width / 2);

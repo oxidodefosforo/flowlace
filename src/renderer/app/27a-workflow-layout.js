@@ -128,15 +128,22 @@ function wfGeom(nodes,o,lay){
   edges.forEach(e=>{(outs.get(e.a)||outs.set(e.a,[]).get(e.a)).push(e);(ins.get(e.b)||ins.set(e.b,[]).get(e.b)).push(e)});
   const spread=(list,e,other)=>{const s=[...list].sort((p,q)=>cy(p[other])-cy(q[other])||(p[other]<q[other]?-1:1)),i=s.indexOf(e),n=s.length;return n===1?.5:(14+(H-28)*i/(n-1))/H};
   const rects=nodes.map(n=>({id:n.id,...pos.get(n.id)})),usedV=[],usedH=[];
+  /* an arrow without a stored anchor never lands on the anchor kept by another arrow on the same side of a card */
+  const freeT=(id,side,t,self)=>{const used=[];edges.forEach(x=>{if(x===self)return;if(x.a===id&&x.sa&&x.sa.side===side)used.push(x.sa.t);if(x.b===id&&x.sb&&x.sb.side===side)used.push(x.sb.t)});
+    if(!used.length||used.every(u=>Math.abs(u-t)>=0.08))return t;let best=t,bd=Infinity;const lo=14/H,hi=1-14/H;
+    for(let k=0;k<=24;k++){const c=lo+(hi-lo)*k/24;if(used.some(u=>Math.abs(u-c)<0.08))continue;const dd=Math.abs(c-t);if(dd<bd){bd=dd;best=c}}return best};
   const yRes=v=>{if(typeof v==='number')return v;const b=v.l&&bandOf.get(v.l);return b&&v.dy!=null?b.y+v.dy:v.y};
   const sortE=[...edges].sort((p,q)=>pos.get(p.a).x-pos.get(q.a).x||cy(p.a)-cy(q.a)||cy(p.b)-cy(q.b));
   sortE.forEach(e=>{const A=pos.get(e.a),B=pos.get(e.b);
     e.A=e.sa||(e.back?{side:'b',t:e.branch==='ret'?0.62:0.5}:e.branch==='yes'?{side:'r',t:0.5}:e.branch==='no'?{side:'b',t:0.5}:{side:'r',t:spread(outs.get(e.a),e,'b')});
     e.B=e.sb||(e.back?{side:'b',t:0.38}:{side:'l',t:spread(ins.get(e.b),e,'a')});
+    if(!e.sa)e.A={...e.A,t:freeT(e.a,e.A.side,e.A.t,e)};if(!e.sb)e.B={...e.B,t:freeT(e.b,e.B.side,e.B.t,e)};
     const S=wfAnchorPt(A,e.A,0,wfShapeOf(by.get(e.a))),E=wfAnchorPt(B,e.B,2,wfShapeOf(by.get(e.b))),S0=wfOut(S,e.A.side),E0=wfOut(E,e.B.side,true),hz=e.A.side==='r'||e.A.side==='l';
     let coords,manual=false;
     const auto=()=>wfAutoRoute(S0,E0,hz,e.B.side==='r'||e.B.side==='l',rects,[e.a,e.b],bands,usedV,usedH);
-    if(e.man&&(typeof e.man[0]==='number')===hz){const sh=(zsh.get(e.a)||0)===(zsh.get(e.b)||0)?zsh.get(e.a)||0:0;coords=e.man.map((v,i)=>typeof v==='number'?v+(((i%2===0)===hz)?sh:0):yRes(v));manual=true;
+    if(e.man&&e.man.length&&(typeof e.man[0]==='number')===hz){const sh=(zsh.get(e.a)||0)===(zsh.get(e.b)||0)?zsh.get(e.a)||0:0;coords=e.man.map((v,i)=>typeof v==='number'?v+(((i%2===0)===hz)?sh:0):yRes(v));manual=true;
+      /* a stored (rounded) coordinate at the level of an end takes that level exactly: no micro step at the ends */
+      coords=coords.map((v,i)=>{const isX=(i%2===0)===hz;for(const P of [S0,E0]){const w=isX?P.x:P.y;if(Math.abs(v-w)<0.75)return w}return v});
       /* a manual route that now crosses a block (its blocks moved) is recalculated; its anchors are kept */
       const ra=rel.get(e.a),rb=rel.get(e.b),same=e.fp&&e.fp[0]===Math.round(ra.x)&&e.fp[1]===Math.round(ra.dy)&&e.fp[2]===Math.round(rb.x)&&e.fp[3]===Math.round(rb.dy);
       if(!same&&wfCrosses(wfRoutePts(S,S0,coords,E0,E,hz).pts,rects,[e.a,e.b])){const c2=auto();if(!wfCrosses(wfRoutePts(S,S0,c2,E0,E,hz).pts,rects,[e.a,e.b])){coords=c2;e.adapted=true}}}
@@ -180,13 +187,17 @@ function wfCrosses(pts,rects,skip){const {W,H}=WFL;for(let j=1;j<pts.length-2;j+
 /* the outline of each shape: arrows start and end ON it (rhombus sides, slanted parallelogram sides, wavy document bottom) */
 const WF_SK=14;
 /* the shape comes ONLY from the activity type chosen (never from the category, a name or being a requirement) */
+/* the wavy bottom of a document card: y of the drawn curve at a given x (same Béziers as wfShapePath) */
+function wfDocWaveY(x){const {W,H}=WFL,segs=[[[W-1,H-10],[W*0.75,H-22],[W*0.6,H+4],[W/2,H-8]],[[W/2,H-8],[W*0.38,H-18],[W*0.2,H+2],[1,H-6]]];
+  const bz=(P,u,i)=>(1-u)**3*P[0][i]+3*(1-u)**2*u*P[1][i]+3*(1-u)*u*u*P[2][i]+u**3*P[3][i];
+  const P=x>=W/2?segs[0]:segs[1];x=Math.max(1,Math.min(W-1,x));let lo=0,hi=1;for(let k=0;k<30;k++){const m=(lo+hi)/2;if(bz(P,m,0)>x)lo=m;else hi=m}return bz(P,(lo+hi)/2,1)}
 function wfShapeOf(n){const t=(n&&n.type)||'normal';return t==='decision'||t==='qa'?'diamond':t==='document'?'doc':t==='info'?'para':'rect'}
 function wfShapePath(sh){const {W,H}=WFL,k=WF_SK;return sh==='diamond'?`M${W/2},1 L${W-1},${H/2} L${W/2},${H-1} L1,${H/2} Z`:sh==='para'?`M${k},1 L${W-1},1 L${W-k},${H-1} L1,${H-1} Z`:sh==='doc'?`M1,1 L${W-1},1 L${W-1},${H-10} C${W*0.75},${H-22} ${W*0.6},${H+4} ${W/2},${H-8} C${W*0.38},${H-18} ${W*0.2},${H+2} 1,${H-6} Z`:`M1,1 H${W-1} V${H-1} H1 Z`}
 function wfAnchorPt(p,a,off,sh){const {W,H}=WFL,t=a.t,hw=W/2,hh=H/2;
   if(sh==='diamond')switch(a.side){case 'l':{const y=t*H;return {x:p.x+hw*Math.abs(y-hh)/hh-off,y:p.y+y}}case 'r':{const y=t*H;return {x:p.x+W-hw*Math.abs(y-hh)/hh+off,y:p.y+y}}
     case 't':{const x=t*W;return {x:p.x+x,y:p.y+hh*Math.abs(x-hw)/hw-off}}default:{const x=t*W;return {x:p.x+x,y:p.y+H-hh*Math.abs(x-hw)/hw+off}}}
   if(sh==='para'){if(a.side==='l')return {x:p.x+WF_SK*(1-t)-off,y:p.y+t*H};if(a.side==='r')return {x:p.x+W-WF_SK*t+off,y:p.y+t*H}}
-  if(sh==='doc'&&a.side==='b')return {x:p.x+t*W,y:p.y+H-7+off};
+  if(sh==='doc'&&a.side==='b')return {x:p.x+t*W,y:p.y+wfDocWaveY(t*W)+off};
   switch(a.side){case 'l':return {x:p.x-off,y:p.y+t*H};case 't':return {x:p.x+t*W,y:p.y-off};case 'b':return {x:p.x+t*W,y:p.y+H+off};default:return {x:p.x+W+off,y:p.y+t*H}}}
 function wfOut(P,side,end){const s=WFL.STUB,o=side==='l'?{x:P.x-s,y:P.y,dx:1,dy:0}:side==='t'?{x:P.x,y:P.y-s,dx:0,dy:1}:side==='b'?{x:P.x,y:P.y+s,dx:0,dy:-1}:{x:P.x+s,y:P.y,dx:-1,dy:0};if(!end){o.dx=-o.dx;o.dy=-o.dy}return o}
 /* points of a route; ctrl[j] = index of the coordinate that places segment j (only those can be dragged) */
@@ -245,7 +256,7 @@ function wfDiagram(nodes,o){
   const mk=(id,c)=>`<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="${c}"/></marker>`;
   /* a small menu next to the selected block (Company workflow): edit it without leaving the diagram */
   let menu='';if(ui.wfMenu&&cx&&cx.scope==='std'){const q=G.pos.get(ui.wfMenu),right=q.x+W+190<G.wd||q.x<200;menu=`<div class="wfmenu" role="menu" aria-label="Activity" style="left:${right?q.x+W+8:q.x-188}px;top:${q.y}px">${cx.canLink?`<button type="button" role="menuitem" data-wflay="menu-prereq">Add prerequisites…</button>`:''}${cx.canLink&&(['decision','qa'].includes((G.by.get(ui.wfMenu)||{}).type))?`<button type="button" role="menuitem" data-wflay="menu-yes">Set Yes outlet…</button><button type="button" role="menuitem" data-wflay="menu-no">Set No outlet…</button>`:''}<button type="button" role="menuitem" data-wflay="menu-details">Show details…</button><button type="button" role="menuitem" class="muted" data-wflay="menu-close">Close</button></div>`}
-  const out=`<div class="wfdia${ui.wfFs?' fs':''}" data-wfdia>${ui.wfFs&&o.fsHead?`<div class="wffs-head">${o.fsHead}</div>`:''}${cx?wfLayBar(cx,G):''}<div class="wfd-wrap${editing?' editing':''}${can?' can-arrange':''}${ui.wfConn||ui.wfRecon?' connecting':''}" role="group" aria-label="Workflow diagram" data-wfctx="${esc(ui.wfDia.id||'')}"><div class="wfd-zoom" style="width:${Math.ceil(G.wd*z)}px;height:${Math.ceil(G.ht*z)}px"><div class="wfd${G.phases?' glob':''}" style="width:${G.wd}px;height:${G.ht}px;transform:scale(${z})">${wfZonesHTML(G,cx,editing)}${bandH}<svg class="wfsvg" width="${G.wd}" height="${G.ht}"><defs>${mk('wfarrow','wfe-h')}${mk('wfarrowh','wfe-hh')}${mk('wfarrowx','wfe-hx')}${mk('wfarrowc','wfe-hc')}${mk('wfarrowy','wfe-hy')}${mk('wfarrown','wfe-hn')}${mk('wfarrowr','wfe-hr')}</defs><g class="wfe-g">${wfEdgesSVG(G,can)}</g><g class="wfe-tmp"></g></svg>${nodesH}<div class="wfguides"></div><div class="wfgrpbox">${wfGroupHTML(G)}</div>${menu}</div></div></div>
+  const out=`<div class="wfdia${ui.wfFs?' fs':''}" data-wfdia>${ui.wfFs&&o.fsHead?`<div class="wffs-head">${o.fsHead}</div>`:''}${cx?wfLayBar(cx,G):''}<div class="wfd-wrap${editing?' editing':''}${can?' can-arrange':''}${ui.wfConn||ui.wfRecon?' connecting':''}" role="group" aria-label="Workflow diagram" data-wfctx="${esc(ui.wfDia.id||'')}"><div class="wfd-zoom" style="width:${Math.ceil(G.wd*z)}px;height:${Math.ceil(G.ht*z)}px"><div class="wfd${G.phases?' glob':''}" style="width:${G.wd}px;height:${G.ht}px;transform:scale(${z})">${wfZonesHTML(G,cx,editing)}${bandH}<svg class="wfsvg" width="${G.wd}" height="${G.ht}"><defs>${mk('wfarrow','wfe-h')}${mk('wfarrowh','wfe-hh')}${mk('wfarrowx','wfe-hx')}${mk('wfarrowc','wfe-hc')}${mk('wfarrowy','wfe-hy')}${mk('wfarrown','wfe-hn')}${mk('wfarrowr','wfe-hr')}</defs><g class="wfe-g">${wfEdgesSVG(G,can)}</g><g class="wfe-tmp"></g></svg>${nodesH}${wfHdLayer(G)}<div class="wfguides"></div><div class="wfgrpbox">${wfGroupHTML(G)}</div>${menu}</div></div></div>
     <div class="wfkey" aria-hidden="true"><span><i class="k-n"></i> same specialty</span><span><i class="k-x"></i> between specialties</span><span><i class="k-r"></i> reference outside this view</span>${G.conflicts.length?'<span><i class="k-c"></i> order to review</span>':''}${can?'<span>Click a line to adjust it · drag blocks to arrange them · <b>Edit layout</b> for zones, alignment and connections.</span>':''}</div></div>`;
   /* the view never jumps: the diagram keeps its scroll after any redraw; the floating editor follows the data */
   const key=ui.wfDia.id;Promise.resolve().then(()=>{wfFill();const w=document.querySelector('.wfd-wrap');if(!w)return;
@@ -303,8 +314,10 @@ function wfEdgesSVG(G,can,tmp){
     if(can)hits+=`<path class="wfe-hit" data-wfe="${esc(e.k)}" d="${wfPathD(e.pts,false)}"><title>${esc((G.by.get(e.a)||{}).name+' → '+(G.by.get(e.b)||{}).name)}${e.conflict?' — order to review: an earlier zone depends on a later one':''}</title></path>`;
     if(on&&can){for(let j=1;j<=e.pts.length-3;j++){const [x1,y1]=e.pts[j],[x2,y2]=e.pts[j+1],vert=x1===x2;if(x1===x2&&y1===y2)continue;const [hx,hy]=wfHandleAt(x1,y1,x2,y2,e.S,e.E);const ss=ui.wfSegSel&&ui.wfSegSel.k===e.k&&ui.wfSegSel.j===j;hd+=`<rect class="wfh${vert?' v':' h'}${ss?' sel':''}" data-wfseg="${j}" x="${hx-6}" y="${hy-6}" width="12" height="12" rx="2"><title>Drag to move this ${vert?'vertical segment left or right':'horizontal segment up or down'} (it snaps to the other lines and blocks) · click to select it for Remove bend · double-click to remove the bend</title></rect>`}
       if(ui.wfBendAt&&ui.wfBendAt.k===e.k){const n=wfNearOnRoute(e.pts.slice(1,-1),ui.wfBendAt);if(n)hd+=`<circle class="wfbp" cx="${Math.round(n.q[0])}" cy="${Math.round(n.q[1])}" r="4.5"><title>Add bend here (Add bend in the bar)</title></circle>`}
-      hd+=`<circle class="wfend" data-wfend="a" cx="${Math.round(e.S.x)}" cy="${Math.round(e.S.y)}" r="6"><title>Start of the arrow: drag along the block’s sides (top, bottom, left, right)</title></circle><circle class="wfend b" data-wfend="b" cx="${Math.round(e.E.x)}" cy="${Math.round(e.E.y)}" r="6"><title>End of the arrow: drag along the block’s sides</title></circle>`}});
-  return paths+labels+(can?`<g class="wfe-hits">${hits}</g><g class="wfe-hd">${hd}</g>`:'')+(tmp||'');
+      const R=Math.max(9,Math.round(12/wfZoom())),end=(w,P,tt)=>`<g class="wfend${w==='b'?' b':''}" data-wfend="${w}"><circle class="wfend-hit" cx="${Math.round(P.x)}" cy="${Math.round(P.y)}" r="${R}"/><circle class="wfend-dot" cx="${Math.round(P.x)}" cy="${Math.round(P.y)}" r="6"/><title>${tt}</title></g>`;
+      hd+=end('a',e.S,'Start of the arrow: drag along the block’s sides (top, bottom, left, right); it snaps to the other end and to the lines')+end('b',e.E,'End of the arrow: drag along the block’s sides; it snaps to the other end and to the lines')}});
+  ui.wfHdHTML=can?hd:'';   // drawn in the layer above the cards (wfHdLayer)
+  return paths+labels+(can?`<g class="wfe-hits">${hits}</g>`:'')+(tmp||'');
 }
 /* compact bar above the diagram */
 function wfLayBar(cx,G){
@@ -349,7 +362,31 @@ const wfDepsMap=()=>Object.fromEntries(wfEdit().steps.map(s=>[s.id,s.deps.slice(
 function wfSnapshot(cx){return JSON.stringify({l:cx.own||null,d:cx.scope==='std'?wfDepsMap():null})}
 function wfHistPush(cx){const h=wfHist(cx);h.u.push(wfSnapshot(cx));if(h.u.length>60)h.u.shift();h.r=[]}
 /* before a dependency change made from a Company workflow view (the current one, or the step's phase) */
-function wfHistDeps(ph){const D=ui.wfDia;let cx=D&&D.cx&&D.cx.scope==='std'?wfLayCtx(D.o.ctx):null;if(!cx)cx=wfLayCtx({scope:'std',key:ph});wfHistPush(cx)}
+function wfHistDeps(ph){const D=ui.wfDia;let cx=D&&D.cx&&D.cx.scope==='std'?wfLayCtx(D.o.ctx):null;if(!cx)cx=wfLayCtx({scope:'std',key:ph});wfHistPush(cx);wfKeepLayout()}
+/* v1.10 — editing dependencies keeps the drawing. Before Add prerequisites, Connect, Reconnect, an outlet or a removal
+   changes the dependencies, what the views show is written into their layouts: every block, lane height, zone start,
+   arrow anchor and route, keyed by step id and by "from>to" (never by array position). The change then only adds or
+   removes its own arrow (routed in the free space, with a free slot on each card); nothing is laid out again.
+   Auto layout and the reset buttons still recalculate when the user asks for them. */
+function wfFreezeView(L,G){
+  L.n=L.n||{};L.l=L.l||{};L.e=L.e||{};
+  G.pos.forEach((q,id)=>{L.n[id]={x:Math.round(q.x),dy:Math.round(q.dy)}});
+  G.bands.forEach(b=>{L.l[b.l]={h:Math.round(b.h)}});
+  const z={...(L.z||{})};for(let k=1;k<G.nz;k++)if(G.zr[k])z[k]=Math.round(G.zr[k].min);L.z=z;
+  G.edges.forEach(e=>{if(!e.coords)return;const c=L.e[e.k]||{};L.e[e.k]={...c,a:e.A,b:e.B,s:wfCoordsStore(e,e.coords.length?e.coords:[e.hz?e.E0.x:e.E0.y],G),f:wfFP(e,G)}});
+  return L}
+function wfKeepLayout(){
+  const dr=wfDraft();if(!dr)return;dr.layout={...(dr.layout||{})};const D=ui.wfDia,cx=D&&D.cx&&D.cx.scope==='std'?wfLayCtx(D.o.ctx):null;
+  /* the view on screen, exactly as drawn (also a view that was still automatic, or derived from its base) */
+  if(cx&&D.G){const L=wfFreezeView(wfOwnCopy(cx),D.G);dr.layout[cx.key]=wfLayNorm(L)}
+  /* the other arranged views of the standard keep their drawing too */
+  const phs=wfPhOrder(dr.steps.filter(x=>!x.retired).map(x=>x.phaseId));
+  Object.keys(dr.layout).forEach(k=>{if(cx&&k===cx.key)return;const L=dr.layout[k];if(!L||!L.n||!Object.keys(L.n).length)return;
+    const base=wfKeyBase(k),sp=wfKeySpecs(k),rk=wfKeyResp(k);if(base!=='_global'&&!S.phases.some(g=>g.id===base))return;
+    try{const g=base==='_global'?wfStdNodesAll(dr,phs,sp,rk):wfStdNodes(dr,base,sp,rk);if(!g.nodes.length)return;
+      const o={mode:'std',std:dr,phases:base==='_global'?wfPhOrder(g.nodes.map(n=>n.ph)):null};
+      const G=wfGeom(g.nodes,o,{n:L.n,l:L.l||{},z:L.z||{},zg:L.zg||{},e:L.e||{}});dr.layout[k]=wfLayNorm(wfFreezeView(wfClone(L),G))}catch(_){}});
+}
 function wfLayWrite(cx,own){
   const now=new Date().toISOString();
   if(cx.scope==='std'){const dr=wfDraft();dr.layout={...(dr.layout||{})};if(own)dr.layout[cx.key]=own;else delete dr.layout[cx.key];save(true);setSaveInd()}
@@ -395,6 +432,7 @@ document.addEventListener('scroll',e=>{const w=e.target;if(!(w&&w.classList&&w.c
   const id=w.dataset.wfctx;clearTimeout(ui.wfViewT);ui.wfViewT=setTimeout(()=>{prefs.wfViews={...(prefs.wfViews||{}),[id]:{l:Math.round(w.scrollLeft),t:Math.round(w.scrollTop)}};savePrefs()},400)},true);
 document.addEventListener('click',e=>{const bt=e.target.closest&&e.target.closest('[data-wflay]');if(!bt||bt.disabled||bt.tagName==='INPUT'||bt.tagName==='LABEL')return;
   e.preventDefault();e.stopImmediatePropagation();
+  wfLineMenuClose();
   const cx=wfCurCtx(),k=bt.dataset.wflay;if(!cx)return;
   if(k==='conn-cancel'){ui.wfConn=null;wfRerender();return}
   if(k==='recon-cancel'){ui.wfRecon=null;wfRerender();return}
@@ -496,7 +534,7 @@ document.addEventListener('pointermove',e=>{const p=wfPtr;if(!p)return;
   e.preventDefault();
   if(p.kind==='node'){const r=wfDragOwn(p,dx,dy,false);p.last=r;wfRepaint(r.own,p,r.guides)}
   else if(p.kind==='seg'){const own=wfSegOwn(p,dx,dy);p.last={own};wfRepaint(own,p,p.guides)}
-  else if(p.kind==='end'){const r=wfEndOwn(p,e);p.last=r;wfRepaint(r?r.own:null,p,null,r&&r.hl)}
+  else if(p.kind==='end'){const r=wfEndOwn(p,e);p.last=r;wfRepaint(r?r.own:null,p,r&&r.g,r&&r.hl)}
   else if(p.kind==='zone'){const own=wfZoneOwn(p,dx,false);wfRepaint(own,p)}
   else if(p.kind==='conn')wfConnPreview(p,e);
   else if(p.kind==='rect'){const L=wfLocal(e),b=p.box;let r=b.querySelector('.wfrect');if(!r){r=document.createElement('div');r.className='wfrect';b.appendChild(r)}
@@ -728,7 +766,7 @@ function wfBendAdd(cx,at){
   const pt=(along,off)=>v?[a[0]+off,along]:[along,a[1]+off];
   const build=off=>[...M.slice(0,hit.j+1),pt(m-sg*half,0),pt(m-sg*half,off),pt(m+sg*half,off),pt(m+sg*half,0),...M.slice(hit.j+1)];
   const rects=[...G.pos.entries()].map(([id,q])=>({id,...q}));let poly=null,off0=32;
-  for(const off of [32,-32,56,-56,88,-88]){const q=build(off);if(!wfCrosses([E.S,...q,E.E],rects,[E.a,E.b])){poly=q;off0=off;break}}
+  for(const off of [32,-32,56,-56,88,-88,124,-124,164,-164,208,-208]){const q=build(off);if(!wfCrosses([E.S,...q,E.E],rects,[E.a,E.b])){poly=q;off0=off;break}}
   if(!poly)poly=build(off0);
   const c=wfRouteSimplify(E,wfPolyCoords(wfPolyNorm(poly),E.hz)),np=wfRoutePts(E.S,E.S0,c,E.E0,E.E,E.hz).pts,p2=pt(m-sg*half,off0),p3=pt(m+sg*half,off0);
   const j=np.findIndex((q,i)=>i<np.length-1&&wfEq(q[0],p2[0])&&wfEq(q[1],p2[1])&&wfEq(np[i+1][0],p3[0])&&wfEq(np[i+1][1],p3[1]));
@@ -746,6 +784,9 @@ function wfBendRemove(cx,j){
   ui.wfSegSel=null;ui.wfBendAt=null;
   const own=wfOwnCopy(cx);own.e[ui.wfEdge]={...(own.e[ui.wfEdge]||{}),a:E.A,b:E.B,s:wfCoordsStore(E,s,G),f:wfFP(E,G)};wfLayCommit(cx,own);return true;
 }
+/* segment handles, the Add bend point and the two ends sit ABOVE the cards: an end inside a card (the wavy bottom of a
+   document) or on its border can always be clicked; elsewhere the layer lets the clicks through to the cards */
+function wfHdLayer(G){return `<svg class="wfsvg wfsvg-top" width="${G.wd}" height="${G.ht}" aria-hidden="false"><g class="wfe-hd">${ui.wfHdHTML||''}</g></svg>`}
 /* only the bar is redrawn (the diagram keeps its elements, so a double-click still reaches them) */
 function wfBarRefresh(){const D=ui.wfDia;if(!D||!D.G)return;const cx=wfLayCtx(D.o.ctx),bar=document.querySelector('.wflay-bar');if(cx&&bar){const t=document.createElement('div');t.innerHTML=wfLayBar(cx,D.G);bar.replaceWith(t.firstElementChild)}}
 /* the route with its finishing moves written out, so every middle segment is controlled by one coordinate */
@@ -753,15 +794,36 @@ function wfFullCoords(e){const p=e.pts,c=[];let h=e.hz;for(let j=2;j<p.length-2;
 function wfCtrlOf(e,c,j){/* segment j starts at point j; with full coords point j (j≥2) comes from coordinate j-2 */return j>=2&&j-2<c.length?j-2:null}
 /* an end of the arrow moves along the sides of its own block; the route is recomputed for the new direction */
 function wfEndOwn(p,ev){
-  if(!p.base){const {G,e}=wfEdgeNow(p.cx);if(!e)return null;p.base={G,e}}
-  const {G,e}=p.base,id=p.which==='a'?e.a:e.b,q=G.pos.get(id),L=wfLocal(ev),x=L.x,y=L.y,{W,H}=WFL;
+  if(!p.base){const {G,e}=wfEdgeNow(p.cx);if(!e)return null;p.base={G,e,snap:null}}
+  const {G,e}=p.base,mine=p.which==='a',id=mine?e.a:e.b,q=G.pos.get(id),L=wfLocal(ev),x=L.x,y=L.y,{W,H}=WFL,sh=wfShapeOf(G.by.get(id)),z=wfZoom();
   const far=x<q.x-48||x>q.x+W+48||y<q.y-48||y>q.y+H+48;
   const d={l:Math.abs(x-q.x),r:Math.abs(x-q.x-W),t:Math.abs(y-q.y),b:Math.abs(y-q.y-H)},side=Object.keys(d).sort((a,b)=>d[a]-d[b])[0];
-  const t=side==='l'||side==='r'?Math.max(0,Math.min(1,(y-q.y)/H)):Math.max(0,Math.min(1,(x-q.x)/W));
-  const own=wfOwnCopy(p.cx),cur=own.e[ui.wfEdge]||{},a={side,t:Math.round(t*1000)/1000},nx={a:p.which==='a'?a:(cur.a||e.A),b:p.which==='b'?a:(cur.b||e.B)};
-  own.e[ui.wfEdge]=nx;   // a new direction gets a new automatic route
+  let t=side==='l'||side==='r'?Math.max(0,Math.min(1,(y-q.y)/H)):Math.max(0,Math.min(1,(x-q.x)/W));
+  /* snapping (v1.10): along its side the end aligns with the other end (a straight arrow) or with the lines of the
+     route that run the same way (the bend between them goes away). Screen-pixel tolerance; the end stays on the
+     card's outline (also on the wavy bottom of a document) and the card does not move. */
+  const along=side==='l'||side==='r'?1:0,ptAt=tt=>{const P=wfAnchorPt(q,{side,t:tt},0,sh);return [P.x,P.y]},v=ptAt(t)[along],tol=WFL.SNAP/z,keep=(WFL.SNAP+1)/z;
+  const other=mine?e.E:e.S,oSide=(mine?e.B:e.A).side,refs=[];
+  if((oSide==='l'||oSide==='r')===(along===1))refs.push({v:along?other.y:other.x,from:along?other.x:other.y,straight:true});
+  e.pts.slice(1,-1).forEach((P,j,M)=>{const Q=M[j+1];if(!Q||j===0||j===M.length-2)return;if(Math.abs(P[along]-Q[along])<0.5&&Math.abs(P[1-along]-Q[1-along])>=0.5)refs.push({v:P[along],from:(P[1-along]+Q[1-along])/2})});
+  let best=null;refs.forEach(r=>{const dd=Math.abs(r.v-v);if(dd<=tol&&(!best||dd<best.d-(r.straight?0.01:0)))best={...r,d:dd}});
+  const cur=p.base.snap;if(cur&&cur.side===side&&Math.abs(cur.v-v)<=keep&&(!best||Math.abs(best.v-v)>=Math.abs(cur.v-v)))best=cur;
+  let snapped=null;
+  if(best){/* the t that puts the end exactly on that line (the outline may be curved: solved numerically) */
+    let lo=0,hi=1;const f=tt=>ptAt(tt)[along],up=f(1)>=f(0);
+    if(best.v>=Math.min(f(0),f(1))-0.01&&best.v<=Math.max(f(0),f(1))+0.01){for(let k=0;k<40;k++){const m=(lo+hi)/2;if((f(m)<best.v)===up)lo=m;else hi=m}t=(lo+hi)/2;snapped={...best,side}}}
+  p.base.snap=snapped;
+  const own=wfOwnCopy(p.cx),old=own.e[ui.wfEdge]||{},a={side,t:snapped?t:Math.round(t*1000)/1000};
+  const nx={a:mine?a:(old.a||e.A),b:!mine?a:(old.b||e.B)};
+  const sameSide=(mine?e.A:e.B).side===side;
+  const P0=wfAnchorPt(q,a,mine?0:2,sh),O0=wfOut(P0,side,!mine),e2={...e,S:mine?P0:e.S,S0:mine?O0:e.S0,E:mine?e.E:P0,E0:mine?e.E0:O0,hz:mine?(side==='l'||side==='r'):e.hz};
+  if(snapped&&snapped.straight){nx.s=wfCoordsStore(e2,[e2.hz?e2.E0.x:e2.E0.y],G);nx.f=wfFP(e,G)}   // both ends at the same height (or x): one straight line
+  else if(sameSide&&e.manual){/* the same side: the manual route is kept, only its first / last line follows the end */
+    nx.s=wfCoordsStore(e2,wfRouteSimplify(e2,wfFullCoords(e)),G);nx.f=wfFP(e,G)}
+  own.e[ui.wfEdge]=nx;   // otherwise a new direction gets a new automatic route
   const hl=side==='l'?[q.x,q.y,q.x,q.y+H]:side==='r'?[q.x+W,q.y,q.x+W,q.y+H]:side==='t'?[q.x,q.y,q.x+W,q.y]:[q.x,q.y+H,q.x+W,q.y+H];
-  return {own,ok:!far,hl};
+  const P=ptAt(t),g=snapped?[{axis:along?'y':'x',abs:true,seg:true,v:snapped.v,a:Math.min(P[1-along],snapped.from),b:Math.max(P[1-along],snapped.from)}]:[];
+  return {own,ok:!far,hl,g};
 }
 document.addEventListener('dblclick',e=>{if(!(e.target.closest&&e.target.closest('.wfd')))return;const cx=wfCurCtx();if(!cx||!cx.canEdit)return;
   const h=e.target.closest('.wfh'),hitE=e.target.closest('.wfe-hit');if(!h&&!hitE)return;e.preventDefault();
@@ -781,7 +843,7 @@ function wfRepaint(own,p,guides,hl){
   G.bands.forEach(b=>{const el=box.querySelector(`.wfl[data-lane="${CSS.escape(b.l)}"]`);if(el){el.style.top=b.y+'px';el.style.height=b.h+'px';el.style.width=G.wd+'px'}});
   D.nodes.forEach(n=>{const el=document.getElementById('wfn-'+n.id),q=G.pos.get(n.id);if(el){el.style.left=q.x+'px';el.style.top=q.y+'px'}});
   const tmp=hl?`<line class="wfside" x1="${hl[0]}" y1="${hl[1]}" x2="${hl[2]}" y2="${hl[3]}"/>`:'';
-  const g=box.querySelector('.wfe-g');if(g)g.innerHTML=wfEdgesSVG(G,!!cx.canEdit,tmp);
+  const g=box.querySelector('.wfe-g');if(g)g.innerHTML=wfEdgesSVG(G,!!cx.canEdit,tmp);{const top=box.querySelector('svg.wfsvg-top');if(top)top.outerHTML=wfHdLayer(G)}
   box.querySelectorAll('.wfzb.limit').forEach(x=>x.classList.remove('limit'));box.querySelectorAll('.wfn.overlap').forEach(x=>x.classList.remove('overlap'));
   if(p&&p.kind==='node'){if(p.limitOn){const zb=box.querySelector(`.wfzb[data-zb="${p.limZ}"]`);if(zb){zb.classList.add('limit');zb.dataset.why=`${['Inputs','Actions','Outputs'][(p.limZ-1)%3]} end here`}}
     (p.overlap||[]).forEach(id=>{const el=document.getElementById('wfn-'+id);el&&el.classList.add('overlap')})}
@@ -826,7 +888,7 @@ async function wfAskLink(a,b){
     if(!v){wfRerender();return}if(v!=='dep'){wfPickBranch(a,v,b);return}}
   const ok=await confirmBox('Add this dependency?',`<b>${esc(A.name)}</b> → <b>${esc(B.name)}</b><br>“${esc(B.name)}” will <b>depend on</b> “${esc(A.name)}” (it needs it first). ${A.phaseId!==B.phaseId?`The requirement comes from ${esc(phName(A.phaseId))}. `:''}This changes the Company workflow draft; publish to share it.`,'Add dependency');
   if(!ok){wfRerender();return}
-  wfHistDeps(B.phaseId);wfMutate(dr=>{const s=wfStep(b,dr);if(s&&!s.deps.includes(a)&&!wfCycle(dr,b,a))s.deps.push(a);wfFixOrder(dr,s.phaseId)});
+  wfHistDeps(B.phaseId);wfMutate(dr=>{const s=wfStep(b,dr);if(s&&!s.deps.includes(a)&&!wfCycle(dr,b,a))s.deps.push(a)});
   toast(`“${B.name}” now depends on “${A.name}”`);
 }
 /* ----- Decision / QA outlets ----- */
@@ -837,7 +899,7 @@ function wfBranchProblem(dr,decId,b,tid){const d=wfStep(decId,dr),T=wfStep(tid,d
 /* sets one outlet; the previous target stops following that answer (its link was the conditional one) */
 function wfSetBranch(dr,decId,b,tid){const d=wfStep(decId,dr);if(!d)return null;d.branches=d.branches||{yes:null,no:null};const old=d.branches[b];let note='';
   if(old&&old!==tid){const O=wfStep(old,dr);if(O)note=`“${O.name}” no longer follows ${b==='yes'?'Yes':'No'}.`}
-  d.branches[b]=tid||null;if(tid){const T=wfStep(tid,dr);if(T&&!wfIsBack(dr,decId,tid))wfFixOrder(dr,T.phaseId);if(T&&wfIsBack(dr,decId,tid))note=(note?note+' ':'')+`It is a review return: “${T.name}” and the work after it are done again when the answer is ${b==='yes'?'Yes':'No'}.`}return note}
+  d.branches[b]=tid||null;if(tid){const T=wfStep(tid,dr);if(T&&wfIsBack(dr,decId,tid))note=(note?note+' ':'')+`It is a review return: “${T.name}” and the work after it are done again when the answer is ${b==='yes'?'Yes':'No'}.`}return note}
 function wfPickBranch(decId,b,tid){const dr=wfEdit(),prob=wfBranchProblem(dr,decId,b,tid);if(prob){wfRerender();toast(prob+' The outlet was not changed.','err');return}
   const d=wfStep(decId,dr),T=wfStep(tid,dr);wfHistDeps(d.phaseId);let note='';wfMutate(x=>{note=wfSetBranch(x,decId,b,tid)});toast(`${b==='yes'?'Yes':'No'} of “${d.name}” → “${T.name}”. ${note}`)}
 /* Reconnect: the same arrow gets another source or target; checked before anything changes */
@@ -850,10 +912,11 @@ async function wfAskReconnect(id){
   if(!ok){wfRerender();return}
   wfHistDeps(B.phaseId);
   wfMutate(dr=>{const old=wfStep(b,dr);if(old)old.deps=old.deps.filter(x=>x!==a);const s=wfStep(nb,dr);if(s&&!s.deps.includes(na))s.deps.push(na);
-    Object.values(dr.layout||{}).forEach(L=>{if(L&&L.e&&L.e[r.k]){const v=L.e[r.k];delete L.e[r.k];const keep={};if(r.which==='a'&&v.b)keep.b=v.b;if(r.which==='b'&&v.a)keep.a=v.a;if(Object.keys(keep).length)L.e[na+'>'+nb]=keep}});wfFixOrder(dr,s.phaseId)});
+    Object.values(dr.layout||{}).forEach(L=>{if(L&&L.e&&L.e[r.k]){const v=L.e[r.k];delete L.e[r.k];const keep={};if(r.which==='a'&&v.b)keep.b=v.b;if(r.which==='b'&&v.a)keep.a=v.a;if(Object.keys(keep).length)L.e[na+'>'+nb]=keep}})});
   ui.wfEdge=na+'>'+nb;wfRerender();toast(`Reconnected: “${B.name}” depends on “${A.name}”.`);
 }
-/* a new dependency never leaves a manually placed activity before what it needs: it (and what follows it) moves right */
+/* (until 1.9: a new dependency moved the dependent block and its successors right. Since 1.10 editing dependencies never
+   moves blocks — an order to review is shown instead. Kept for reference, not called.) */
 function wfFixOrder(dr,ph){
   /* every view of that phase (all specialties and each filter) and every All phases view follows the same rule */
   if(!wfFiltered(ph)&&ph!=='_global'){Object.keys(dr.layout||{}).filter(k=>k!==ph&&(wfKeyBase(k)===ph||wfKeyBase(k)==='_global')).forEach(k=>wfFixOrder(dr,k))}
@@ -873,7 +936,7 @@ function wfPlaceInViews(dr,s,hint){
   Object.keys(dr.layout||{}).forEach(k=>{const base=wfKeyBase(k),sp=wfKeySpecs(k),ty=wfKeyTypes(k),rk=wfKeyResp(k),L=dr.layout[k];
     if(base!==s.phaseId&&base!=='_global')return;if(sp&&!sp.includes(wfSpecOf(s)))return;if(ty&&!ty.includes(wfType(s)))return;if(rk&&!wfInRespStd(s,rk))return;if(!L||!L.n||!Object.keys(L.n).length)return;
     delete L.n[s.id];
-    const g=base==='_global'?wfStdNodesAll(dr,phs,sp,ty):wfStdNodes(dr,base,sp,ty);if(!g.nodes.some(n=>n.id===s.id))return;
+    const g=base==='_global'?wfStdNodesAll(dr,phs,sp,rk):wfStdNodes(dr,base,sp,rk);if(!g.nodes.some(n=>n.id===s.id))return;
     const o={mode:'std',std:dr,phases:base==='_global'?wfPhOrder(g.nodes.map(n=>n.ph)):null};
     const G=wfGeom(g.nodes,o,{n:L.n,l:L.l||{},z:L.z||{},zg:L.zg||{},e:L.e||{},hint:hint&&hint.key===k?{...hint,id:s.id}:null}),q=G.pos.get(s.id);
     if(q)L.n[s.id]={x:Math.round(q.x),dy:Math.round(q.dy)}});
@@ -896,3 +959,21 @@ function wfLocate(id){ui.wfLocate=null;ui.wfSel=id;ui.wfMenu=null;wfRerender();
 /* several arrows close together: the one under the pointer is highlighted */
 document.addEventListener('pointerover',e=>{const h=e.target.closest&&e.target.closest('.wfe-hit');if(!h)return;const k=h.dataset.wfe;document.querySelectorAll('.wfe.hov').forEach(x=>x.classList.remove('hov'));const p=document.querySelector(`path.wfe[data-k="${CSS.escape(k)}"]`);p&&p.classList.add('hov')},true);
 document.addEventListener('pointerout',e=>{if(e.target.closest&&e.target.closest('.wfe-hit'))document.querySelectorAll('.wfe.hov').forEach(x=>x.classList.remove('hov'))},true);
+/* ----- v1.10: right-click on a line = its context menu (Add bend at that point, Remove bend there, Reset route) ----- */
+function wfLineMenuClose(){document.querySelectorAll('.wfline-menu').forEach(m=>m.remove())}
+document.addEventListener('contextmenu',e=>{const hit=e.target.closest&&e.target.closest('.wfe-hit,.wfh');if(!hit||!hit.closest('.wfd'))return;const cx=wfCurCtx();if(!cx||!cx.canEdit)return;e.preventDefault();e.stopPropagation();
+  wfLineMenuClose();const L=wfLocal(e),k=hit.classList.contains('wfh')?ui.wfEdge:hit.dataset.wfe;if(!k)return;
+  ui.wfEdge=k;ui.wfMulti=[];ui.wfMenu=null;ui.wfRecon=null;
+  const E=wfEdgeNow(cx).e;if(!E)return;const n=wfNearOnRoute(E.pts.slice(1,-1),L),j=hit.classList.contains('wfh')?+hit.dataset.wfseg:n?n.j+1:null;
+  const c=wfFullCoords(E),i=j&&j!==1?wfCtrlOf(E,c,j):null,canRm=i!=null&&c.length>=2;
+  ui.wfBendAt={k,x:L.x,y:L.y};ui.wfSegSel=canRm?{k,j}:null;wfRepaint(null);
+  const box=document.querySelector('.wfd');if(!box)return;
+  box.insertAdjacentHTML('beforeend',`<div class="wfmenu wfline-menu" role="menu" aria-label="Connection" style="left:${Math.round(L.x+6)}px;top:${Math.round(L.y+6)}px">
+    <button type="button" role="menuitem" data-wflay="bend-add">Add bend</button>
+    <button type="button" role="menuitem" data-wflay="bend-rm"${canRm?'':' disabled title="No bend here that can be removed"'}>Remove bend</button>
+    <button type="button" role="menuitem" data-wflay="route-reset"${E.manual?'':' disabled'}>Reset route</button></div>`);
+  const f=box.querySelector('.wfline-menu button:not([disabled])');f&&f.focus({preventScroll:true})},true);
+document.addEventListener('keydown',e=>{const m=document.querySelector('.wfline-menu');if(!m)return;
+  if(e.key==='Escape'){e.preventDefault();e.stopPropagation();wfLineMenuClose();return}
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){const bs=[...m.querySelectorAll('button:not([disabled])')],i=bs.indexOf(document.activeElement);if(!bs.length)return;e.preventDefault();bs[(i+(e.key==='ArrowDown'?1:-1)+bs.length)%bs.length].focus()}},true);
+document.addEventListener('pointerdown',e=>{if(!(e.target.closest&&e.target.closest('.wfline-menu')))wfLineMenuClose()},true);

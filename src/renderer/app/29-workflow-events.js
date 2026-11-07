@@ -18,7 +18,7 @@ document.addEventListener('change',e=>{const el=e.target;if(!el.dataset)return;
     if(!v){wfHistDeps(d.phaseId);let note='';wfMutate(x=>{note=wfSetBranch(x,d.id,b,null)});toast(`${b==='yes'?'Yes':'No'} outlet of “${d.name}” is not set. ${note}`);return}
     wfPickBranch(d.id,b,v);return}
   if(el.dataset.wfdep){const dr=wfDraft(),s=wfStep(el.dataset.wfdep,dr),dep=el.value;if(!s)return;
-    if(el.checked){const why=wfLinkProblem(dr,dep,s.id);if(why){el.checked=false;toast(why,'err');return}wfHistDeps(s.phaseId);wfMutate(d=>{s.deps.push(dep);wfFixOrder(d,s.phaseId)})}
+    if(el.checked){const why=wfLinkProblem(dr,dep,s.id);if(why){el.checked=false;toast(why,'err');return}wfHistDeps(s.phaseId);wfMutate(()=>{s.deps.push(dep)})}
     else{wfHistDeps(s.phaseId);wfMutate(d=>{s.deps=s.deps.filter(x=>x!==dep);wfUnbranch(d,dep,s.id)})}
     wfPrereqRefresh();
     const c=document.querySelector(`#wffloat [data-wfdep="${s.id}"][value="${dep}"]`)||document.querySelector(`[data-wfdep="${s.id}"][value="${dep}"]`);c&&c.focus({preventScroll:true});return}
