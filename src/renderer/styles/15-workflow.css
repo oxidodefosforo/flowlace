@@ -155,6 +155,10 @@ body.wf-dragging,body.wf-dragging *{user-select:none!important;cursor:grabbing}
 .wfe.man{stroke-linejoin:round}
 .wfh{fill:var(--surface);stroke:var(--accent);stroke-width:2;pointer-events:all}
 .wfh.v{cursor:ew-resize}.wfh.h{cursor:ns-resize}
+.wfh:hover{fill:var(--accent-soft)}
+.wfh.sel{fill:var(--accent);stroke:var(--surface)}
+/* the point chosen for Add bend */
+.wfbp{fill:var(--surface);stroke:var(--accent);stroke-width:2;stroke-dasharray:2 2;pointer-events:none}
 .wfd-wrap.editing .wfe{opacity:.9}
 .wfl-n{position:sticky;left:0;top:auto;display:inline-flex;padding:6px 8px;background:color-mix(in srgb,var(--surface) 92%,transparent);z-index:3;border-radius:0 0 6px 0;box-sizing:border-box}
 .wfl{border-top:1px dashed var(--line)}
@@ -182,6 +186,10 @@ table.ppl td{vertical-align:top}
 .wfguides{position:absolute;inset:0;pointer-events:none;z-index:6}
 .wfg{position:absolute;display:block;background:#E5484D}
 .wfg.v{width:1px}.wfg.h{height:1px}
+/* a segment snapped to a line: a discreet dashed guide in the accent colour */
+.wfg.seg{background:none}
+.wfg.seg.v{border-left:1px dashed var(--accent)}
+.wfg.seg.h{border-top:1px dashed var(--accent)}
 .wfend{fill:var(--accent);stroke:var(--surface);stroke-width:2;pointer-events:all;cursor:move}
 .wfend.b{fill:var(--surface);stroke:var(--accent)}
 .wfside{stroke:var(--accent);stroke-width:4;stroke-linecap:round;opacity:.5}
@@ -355,3 +363,18 @@ body:has(.wfdia.fs) #main{overflow:hidden}
 .wfscope{border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:8px 0;display:flex;flex-direction:column;gap:3px;max-height:40vh;overflow:auto}
 .wfscope legend{font-size:12px;color:var(--fg-2);padding:0 4px}
 .wfret-l{display:flex;flex-wrap:wrap;gap:4px}
+/* Responsible filter (v1.9): chips when there are few, a compact selector with search when there are many */
+.wfresp .chip.none{font-style:italic}
+.wfrp{position:relative;display:inline-flex;gap:4px;align-items:center}
+.wfrp-btn.on{background:var(--accent-soft);color:var(--accent-t);border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+.wfrp-x{padding:0 7px}
+.wfrp-pop{position:absolute;top:calc(100% + 4px);left:0;z-index:60;width:240px;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:6px;display:flex;flex-direction:column;gap:4px}
+.wfrp-pop[hidden]{display:none}
+.wfrp-q{height:var(--h-ctl-sm);font-size:13px}
+.wfrp-list{max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:1px}
+.wfrp-o{display:flex;align-items:center;gap:8px;border:0;background:none;text-align:left;padding:5px 8px;border-radius:var(--r-sm);cursor:pointer;font-size:13.5px;color:var(--fg)}
+.wfrp-o::before{content:"";width:14px;height:14px;border:1.5px solid var(--line-2);border-radius:3px;flex:none;background:var(--surface)}
+.wfrp-o[aria-checked="true"]::before{background:var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='m3.5 7.2 2.3 2.3 4.7-5' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat;border-color:var(--accent)}
+.wfrp-o:hover,.wfrp-o:focus-visible{background:var(--hover)}
+.wfrp-o.none{color:var(--muted);font-style:italic}
+.wfrp-o[hidden]{display:none}

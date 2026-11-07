@@ -183,12 +183,18 @@ module.exports = async function run() {
     assert.ok(hb2b, 'handle of the moved segment'); const hb2c = hb2b;
     await dragFrom({ x: hb2c.x + hb2c.width / 2, y: hb2c.y + hb2c.height / 2 }, 0, 50 * z);
     H1 = horz(await pts(K1));
-    assert.ok(H1.some(s => Math.abs(s.y - (hy + 20)) <= 7), 'moved down: ' + JSON.stringify(H1));
+    assert.ok(H1.some(s => Math.abs(s.y - (hy + 20)) <= 13), 'moved down (since 1.9 segments snap: two drags may add two snaps): ' + JSON.stringify([hy, H1]));
     assert.ok(vert(await pts(K1)).some(s => s.x === sepXs[0]), 'its vertical stays where it was put: ' + JSON.stringify([sepXs, await pts(K1), lay().e[K1]]));
     // add a bend on the line, then remove it from its handle
     const n0 = (await pts(K1)).length, P = await pts(K1), V = vert(P).sort((a, b) => Math.abs(b.y2 - b.y1) - Math.abs(a.y2 - a.y1))[0];
-    const c = await w.evaluate(({ x, y }) => { const d = document.querySelector('.wfd'), r = d.getBoundingClientRect(), z = r.width / d.offsetWidth; return { x: r.left + x * z, y: r.top + y * z }; }, { x: V.x, y: V.y1 + (V.y2 - V.y1) * 0.25 });
-    await w.mouse.dblclick(c.x, c.y); await H.sleep(250);
+    /* since 1.9 a double-click adds a bend only where one line passes (on overlaps, quick clicks choose the line) */
+    const c = await w.evaluate(({ V, k }) => { const d = document.querySelector('.wfd'), r = d.getBoundingClientRect(), z = r.width / d.offsetWidth;
+      for (const f of [0.25, 0.35, 0.7, 0.8, 0.15, 0.6, 0.85]) { const x = r.left + V.x * z, y = r.top + (V.y1 + (V.y2 - V.y1) * f) * z, els = document.elementsFromPoint(x, y);
+        const u = [...new Set(els.filter(e => e.classList.contains('wfe-hit')).map(e => e.dataset.wfe))]; if (u.length === 1 && u[0] === k && !els.some(e => e.classList.contains('wfh'))) return { x, y }; }
+      return null; }, { V, k: K1 });
+    if (c) { await w.mouse.dblclick(c.x, c.y); await H.sleep(250); }
+    else { const d = await w.evaluate(({ x, y }) => { const e = document.querySelector('.wfd'), r = e.getBoundingClientRect(), z = r.width / e.offsetWidth; return { x: r.left + x * z, y: r.top + y * z }; }, { x: V.x, y: V.y1 + (V.y2 - V.y1) * 0.3 });
+      await w.mouse.click(d.x, d.y); await H.sleep(150); if ((await picked()) !== K1) await selectEdge(K1); await w.click('[data-wflay=bend-add]'); await H.sleep(250); }
     const n1 = (await pts(K1)).length;
     assert.ok(n1 > n0, `bend added (${n0} → ${n1} points)`);
     assert.strictEqual(await picked(), K1, 'still selected');
@@ -198,6 +204,7 @@ module.exports = async function run() {
     at = await attached(K1); assert.ok(at.a && at.b, 'attached after adding and removing bends');
     await undo(); assert.strictEqual((await pts(K1)).length, n1, 'Undo: bend back');
     await redo(); assert.ok((await pts(K1)).length < n1, 'Redo: removed again');
+    await undo(); await undo(); assert.strictEqual((await pts(K1)).length, n0, 'Undo twice: the line as before the bend (since 1.9 Add bend draws a real detour)');
   });
 
   await step('4 · start and end change side (bottom / top) without disconnecting; dependency kept; Escape restores', async () => {

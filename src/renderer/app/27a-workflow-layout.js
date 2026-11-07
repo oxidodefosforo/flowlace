@@ -48,11 +48,14 @@ function wfLayoutsNorm(x){const o={};if(!x||typeof x!=='object')return o;Object.
 /* ----- one layout per view: phase (or _global for All phases) + the selected specialties, in a fixed order -----
    "ph-sd" = all specialties; "ph-sd~sv-electrical+sv-hydraulics" = Electrical + Hydraulics, whatever the click order */
 /* "...^decision+qa" = activity types shown (the type filter), also in a fixed order */
-const wfViewKey=(base,specs,types)=>base+(specs&&specs.length?'~'+[...new Set(specs)].sort().join('+'):'')+(types&&types.length?'^'+[...new Set(types)].sort().join('+'):'');
-const wfKeyBase=k=>String(k).split(/[~^]/)[0];
-const wfKeySpecs=k=>{const m=String(k).match(/~([^^]*)/);return m?m[1].split('+').filter(Boolean):null};
-const wfKeyTypes=k=>{const m=String(k).match(/\^(.*)$/);return m?m[1].split('+').filter(Boolean):null};
-const wfFiltered=k=>/[~^]/.test(String(k));
+/* "...@ro-eng+_none" = responsibles shown (v1.9: roles in the Company workflow, people in a project); a filtered view
+   keeps its own layout like the others. "^…" keys (the activity-type filter of 1.6–1.8) stay stored, unused. */
+const wfViewKey=(base,specs,types,resp)=>base+(specs&&specs.length?'~'+[...new Set(specs)].sort().join('+'):'')+(types&&types.length?'^'+[...new Set(types)].sort().join('+'):'')+(resp&&resp.length?'@'+[...new Set(resp)].sort().join('+'):'');
+const wfKeyBase=k=>String(k).split(/[~^@]/)[0];
+const wfKeySpecs=k=>{const m=String(k).match(/~([^^@]*)/);return m?m[1].split('+').filter(Boolean):null};
+const wfKeyTypes=k=>{const m=String(k).match(/\^([^@]*)/);return m?m[1].split('+').filter(Boolean):null};
+const wfKeyResp=k=>{const m=String(k).match(/@(.*)$/);return m?m[1].split('+').filter(Boolean):null};
+const wfFiltered=k=>/[~^@]/.test(String(k));
 
 /* ----- which layout a diagram uses, and who may change it ----- */
 const wfCanEditStd=()=>typeof SY==='undefined'||SY.isAdmin!==false;
@@ -298,7 +301,8 @@ function wfEdgesSVG(G,can,tmp){
     if(e.branch){const a=e.pts[1],b=e.pts[2]||a,dx=Math.sign(b[0]-a[0]),dy=Math.sign(b[1]-a[1]),lx=a[0]+(dx?dx*6:4),ly=a[1]+(dy?dy*6:-12),t=e.branch==='yes'?'Yes':e.branch==='no'?'No':'↺ Return',w=t.length*7+10;
       labels+=`<g class="wfbl br-${e.branch}${e.taken===true?' b-on':e.taken===false?' b-off':''}" data-k="${esc(e.k)}" aria-hidden="true"><rect x="${Math.round(lx-(dx<0?w:0))}" y="${Math.round(ly-(dy<0?14:0))}" width="${w}" height="14" rx="3"/><text x="${Math.round(lx-(dx<0?w:0)+w/2)}" y="${Math.round(ly-(dy<0?14:0)+10.5)}">${t}</text></g>`}
     if(can)hits+=`<path class="wfe-hit" data-wfe="${esc(e.k)}" d="${wfPathD(e.pts,false)}"><title>${esc((G.by.get(e.a)||{}).name+' → '+(G.by.get(e.b)||{}).name)}${e.conflict?' — order to review: an earlier zone depends on a later one':''}</title></path>`;
-    if(on&&can){for(let j=1;j<=e.pts.length-3;j++){const [x1,y1]=e.pts[j],[x2,y2]=e.pts[j+1],vert=x1===x2;if(x1===x2&&y1===y2)continue;const [hx,hy]=wfHandleAt(x1,y1,x2,y2,e.S,e.E);hd+=`<rect class="wfh${vert?' v':' h'}" data-wfseg="${j}" x="${hx-6}" y="${hy-6}" width="12" height="12" rx="2"><title>Drag to move this ${vert?'vertical segment left or right':'horizontal segment up or down'} · double-click to remove the bend</title></rect>`}
+    if(on&&can){for(let j=1;j<=e.pts.length-3;j++){const [x1,y1]=e.pts[j],[x2,y2]=e.pts[j+1],vert=x1===x2;if(x1===x2&&y1===y2)continue;const [hx,hy]=wfHandleAt(x1,y1,x2,y2,e.S,e.E);const ss=ui.wfSegSel&&ui.wfSegSel.k===e.k&&ui.wfSegSel.j===j;hd+=`<rect class="wfh${vert?' v':' h'}${ss?' sel':''}" data-wfseg="${j}" x="${hx-6}" y="${hy-6}" width="12" height="12" rx="2"><title>Drag to move this ${vert?'vertical segment left or right':'horizontal segment up or down'} (it snaps to the other lines and blocks) · click to select it for Remove bend · double-click to remove the bend</title></rect>`}
+      if(ui.wfBendAt&&ui.wfBendAt.k===e.k){const n=wfNearOnRoute(e.pts.slice(1,-1),ui.wfBendAt);if(n)hd+=`<circle class="wfbp" cx="${Math.round(n.q[0])}" cy="${Math.round(n.q[1])}" r="4.5"><title>Add bend here (Add bend in the bar)</title></circle>`}
       hd+=`<circle class="wfend" data-wfend="a" cx="${Math.round(e.S.x)}" cy="${Math.round(e.S.y)}" r="6"><title>Start of the arrow: drag along the block’s sides (top, bottom, left, right)</title></circle><circle class="wfend b" data-wfend="b" cx="${Math.round(e.E.x)}" cy="${Math.round(e.E.y)}" r="6"><title>End of the arrow: drag along the block’s sides</title></circle>`}});
   return paths+labels+(can?`<g class="wfe-hits">${hits}</g><g class="wfe-hd">${hd}</g>`:'')+(tmp||'');
 }
@@ -315,7 +319,7 @@ function wfLayBar(cx,G){
   else if(ui.wfConn)ctx=`<span class="wflay-e">${ui.wfConn.from?`<b>${esc((G&&G.by.get(ui.wfConn.from)||{}).name||'')}</b> → now click the activity that <b>depends on it</b>`:'Click the activity that <b>provides</b> the requirement (A), then the one that depends on it (B). A → B means B depends on A.'}</span>${b('conn-cancel','Cancel',false,'Leave connection mode')}`;
   else if(ui.wfBrPick&&G&&G.by.get(ui.wfBrPick.id))ctx=`<span class="wflay-e">Click the activity that follows <b>${ui.wfBrPick.b==='yes'?'Yes':'No'}</b> of <b>${esc(G.by.get(ui.wfBrPick.id).name)}</b></span>${b('brpick-cancel','Cancel',false,'Keep the outlet as it is')}`;
   else if(multi.length>1){const r=G&&G.by.get(multi[0]);ctx=`<span class="wflay-e"><b>${multi.length} activities selected</b> · drag one to move them together · reference for aligning: <b>${esc(r?r.name:'')}</b></span>${b('align-x','Align columns',!ed,'Same x as the reference (any specialty)')}${b('align-y','Align rows',!ed,'Same y as the reference (only blocks of its specialty)')}${b('dist-x','Distribute ↔',!ed||multi.length<3,'Equal horizontal spacing')}${b('dist-y','Distribute ↕',!ed||multi.length<3,'Equal vertical spacing inside each specialty')}${b('multi-clear','Clear selection',false,'Deselect')}`}
-  else if(E)ctx=`<span class="wflay-e"><b>${esc(G.by.get(E.a).name)} → ${esc(G.by.get(E.b).name)}</b> · drag a segment or an end · double-click the line to add a bend</span>${b('route-reset','Reset selected route',!ed,'Back to the automatic route and connection points for this arrow only')}${cx.scope==='std'&&cx.canLink&&(E.branch==='yes'||E.branch==='no')?b('br-clear',`Clear ${E.branch==='yes'?'Yes':'No'} outlet`,!ed,'The outlet stays unset (the activities stay)'):''}${cx.scope==='std'&&cx.canLink&&E.branch==='ret'?b('ret-del','Remove return',!ed,'The rework no longer goes back'):''}${E.branch?'':`${cx.scope==='std'&&cx.canLink&&!G.by.get(E.a).ref?b('recon-a','Reconnect source…',!ed,'Choose another activity that provides this requirement'):''}${cx.scope==='std'&&cx.canLink?b('recon-b','Reconnect target…',!ed,'Choose another activity that needs this requirement'):''}`}`;
+  else if(E){const bOk=!!(ui.wfBendAt&&ui.wfBendAt.k===E.k),sOk=!!(ui.wfSegSel&&ui.wfSegSel.k===E.k);ctx=`<span class="wflay-e"><b>${esc(G.by.get(E.a).name)} → ${esc(G.by.get(E.b).name)}</b> · drag a segment (it snaps; lines in line merge) or an end · ${bOk?'Add bend at the marked point':sOk?'segment selected':'click a point of the line, then Add bend'}</span>${b('bend-add','Add bend',!ed||!bOk,'Insert a detour at the point you clicked on the line (also: double-click the line)')}${b('bend-rm','Remove bend',!ed||!sOk,'Remove the selected segment (click its square handle) and join its neighbours, if the route stays valid')}${b('route-reset','Reset selected route',!ed,'Back to the automatic route and connection points for this arrow only')}${cx.scope==='std'&&cx.canLink&&(E.branch==='yes'||E.branch==='no')?b('br-clear',`Clear ${E.branch==='yes'?'Yes':'No'} outlet`,!ed,'The outlet stays unset (the activities stay)'):''}${cx.scope==='std'&&cx.canLink&&E.branch==='ret'?b('ret-del','Remove return',!ed,'The rework no longer goes back'):''}${E.branch?'':`${cx.scope==='std'&&cx.canLink&&!G.by.get(E.a).ref?b('recon-a','Reconnect source…',!ed,'Choose another activity that provides this requirement'):''}${cx.scope==='std'&&cx.canLink?b('recon-b','Reconnect target…',!ed,'Choose another activity that needs this requirement'):''}`}`}
   else if(selStep&&cx.scope==='std'&&cx.canLink&&!selStep.ref)ctx=`<span class="wflay-e"><b>${esc(selStep.name)}</b></span>${b('prereq','Add prerequisites…',false,'Choose what this activity needs, also from other phases')}`;
   else if(selStep&&cx.scope==='proj')ctx=`<span class="wflay-e"><b>${esc(selStep.name)}</b></span>${b('goto-std','Edit in Company workflow',false,'Dependencies are defined in the company standard')}`;
   else if(ui.wfLocate&&G&&G.pos.has(ui.wfLocate))ctx=`<span class="wflay-e"><b>${esc(G.by.get(ui.wfLocate).name)}</b> was added outside the visible area · nothing else moved</span>${b('locate','Locate new activity',false,'Scroll to the new activity and select it')}`;
@@ -413,9 +417,11 @@ document.addEventListener('click',e=>{const bt=e.target.closest&&e.target.closes
   if(k==='edit'){ui.wfLayEdit=!ui.wfLayEdit;if(!ui.wfLayEdit)ui.wfMulti=[];wfRerender();const x=document.querySelector('[data-wflay=edit]');x&&x.focus({preventScroll:true});return}
   if(k==='conn'){ui.wfConn=ui.wfConn?null:{from:null};ui.wfEdge=null;ui.wfRecon=null;ui.wfMenu=null;wfRerender();return}
   if(k==='recon-a'||k==='recon-b'){ui.wfRecon={k:ui.wfEdge,which:k==='recon-a'?'a':'b'};ui.wfConn=null;wfRerender();return}
-  if(k==='undo'||k==='redo'){const h=wfHist(cx),from=k==='undo'?h.u:h.r,to=k==='undo'?h.r:h.u;if(!from.length)return;to.push(wfSnapshot(cx));wfRestore(cx,from.pop());const x=document.querySelector(`[data-wflay=${k}]`);x&&!x.disabled&&x.focus({preventScroll:true});return}
+  if(k==='undo'||k==='redo'){ui.wfSegSel=null;ui.wfBendAt=null;const h=wfHist(cx),from=k==='undo'?h.u:h.r,to=k==='undo'?h.r:h.u;if(!from.length)return;to.push(wfSnapshot(cx));wfRestore(cx,from.pop());const x=document.querySelector(`[data-wflay=${k}]`);x&&!x.disabled&&x.focus({preventScroll:true});return}
   if(k==='auto'){const keep=cx.own&&cx.own.e&&Object.keys(cx.own.e).length?wfClone(cx.own.e):{};wfLayCommit(cx,cx.scope==='std'&&!wfFiltered(cx.key)?(Object.keys(keep).length?{n:{},l:{},e:keep}:null):{auto:true,n:{},l:{},e:keep});toast('Automatic layout: Inputs → Actions → Outputs. Adjusted arrows keep their connection points and routes where they still fit.');return}
   if(k==='reset'){wfLayCommit(cx,cx.scope==='std'?(cx.pub?wfClone(cx.pub):null):null);toast(cx.scope==='std'?'Layout of this phase back to the published one. Activities and dependencies are unchanged.':'Back to the standard’s layout. Activities and dependencies are unchanged.');return}
+  if(k==='bend-add'&&ui.wfEdge){wfBendAdd(cx,ui.wfBendAt);return}
+  if(k==='bend-rm'&&ui.wfEdge&&ui.wfSegSel){wfBendRemove(cx,ui.wfSegSel.j);return}
   if(k==='route-reset'&&ui.wfEdge){const own=wfOwnCopy(cx),key=ui.wfEdge;if(cx.scope==='proj'&&cx.base&&cx.base.e&&cx.base.e[key]&&!(cx.own&&cx.own.auto))own.e[key]={auto:true};else delete own.e[key];wfLayCommit(cx,own);return}
   if(k==='routes-reset'){const own=wfOwnCopy(cx);own.e={};if(cx.scope==='proj'&&cx.base&&cx.base.e&&!(cx.own&&cx.own.auto))Object.keys(cx.base.e).forEach(x=>{own.e[x]={auto:true}});wfLayCommit(cx,own);toast('All arrows of this view use their automatic routes again. Dependencies and block positions are unchanged.');return}
   if(k==='fit'){wfFitZones(cx);return}
@@ -453,7 +459,10 @@ document.addEventListener('pointerdown',e=>{
     /* several lines under the pointer: each click selects the next one */
     const under=[...new Set(document.elementsFromPoint(e.clientX,e.clientY).filter(x=>x.classList&&x.classList.contains('wfe-hit')).map(x=>x.dataset.wfe))];
     const i=under.indexOf(ui.wfEdge),next=under.length>1&&i>=0?under[(i+1)%under.length]:hitE.dataset.wfe;
-    if(ui.wfEdge!==next){ui.wfEdge=next;ui.wfMulti=[];ui.wfMenu=null;ui.wfRecon=null;wfRepaint(null)}
+    const L0=wfLocal(e);
+    if(ui.wfEdge!==next){ui.wfEdge=next;ui.wfMulti=[];ui.wfMenu=null;ui.wfRecon=null;ui.wfSegSel=null;ui.wfBendAt={k:next,x:L0.x,y:L0.y};wfRepaint(null)}
+    else{ui.wfBendAt={k:next,x:L0.x,y:L0.y};ui.wfSegSel=null;document.querySelectorAll('.wfh.sel').forEach(x=>x.classList.remove('sel'));   // the point for Add bend; the diagram stays as it is
+      const E=ui.wfDia&&ui.wfDia.G&&ui.wfDia.G.edges.find(x=>x.k===next),hd=document.querySelector('.wfe-hd');if(E&&hd){hd.querySelectorAll('.wfbp').forEach(x=>x.remove());const n=wfNearOnRoute(E.pts.slice(1,-1),ui.wfBendAt);if(n)hd.insertAdjacentHTML('beforeend',`<circle class="wfbp" cx="${Math.round(n.q[0])}" cy="${Math.round(n.q[1])}" r="4.5"></circle>`)}wfBarRefresh()}
     if(under.length>1)toast(`${under.length} connections here — click again to select the next one`);
     return}
   const wr=box.closest('.wfd-wrap');
@@ -486,7 +495,7 @@ document.addEventListener('pointermove',e=>{const p=wfPtr;if(!p)return;
     if(p.kind==='zone')wfZoneStart(p)}
   e.preventDefault();
   if(p.kind==='node'){const r=wfDragOwn(p,dx,dy,false);p.last=r;wfRepaint(r.own,p,r.guides)}
-  else if(p.kind==='seg'){const own=wfSegOwn(p,dx,dy);p.last={own};wfRepaint(own,p)}
+  else if(p.kind==='seg'){const own=wfSegOwn(p,dx,dy);p.last={own};wfRepaint(own,p,p.guides)}
   else if(p.kind==='end'){const r=wfEndOwn(p,e);p.last=r;wfRepaint(r?r.own:null,p,null,r&&r.hl)}
   else if(p.kind==='zone'){const own=wfZoneOwn(p,dx,false);wfRepaint(own,p)}
   else if(p.kind==='conn')wfConnPreview(p,e);
@@ -501,12 +510,13 @@ document.addEventListener('pointerup',e=>{const p=wfPtr;if(!p)return;wfPtr=null;
     ui.wfSuppress=Date.now();const G=ui.wfDia&&ui.wfDia.G;if(!G)return;const {W,H}=WFL,x0=Math.min(p.lx,p.lx1),x1=Math.max(p.lx,p.lx1),y0=Math.min(p.ly,p.ly1),y1=Math.max(p.ly,p.ly1);
     const hit=[...G.pos.entries()].filter(([,q])=>q.x<x1&&q.x+W>x0&&q.y<y1&&q.y+H>y0).map(([id])=>id);
     ui.wfMulti=p.add?[...new Set([...(ui.wfMulti||[]),...hit])]:hit;ui.wfSel=ui.wfMulti.length===1?ui.wfMulti[0]:null;ui.wfMenu=null;ui.wfEdge=null;wfRerender();return}
+  if(p.kind==='seg'&&!p.moved){ui.wfSegSel={k:ui.wfEdge,j:p.j};ui.wfBendAt=null;document.querySelectorAll('.wfh.sel,.wfbp').forEach(x=>x.classList.contains('wfbp')?x.remove():x.classList.remove('sel'));const h=document.querySelector(`.wfh[data-wfseg="${p.j}"]`);h&&h.classList.add('sel');wfBarRefresh();return}
   if(!p.moved)return;                                    // a click: selection / opening work as before
   ui.wfSuppress=Date.now();
   if(!wfPtrLive(p))return;
   const z=wfZoom(),dx=(e.clientX-p.x0)/z,dy=(e.clientY-p.y0)/z;
   if(p.kind==='node'){const r=wfDragOwn(p,dx,dy,true);wfLayCommit(p.cx,r.own)}
-  else if(p.kind==='seg')wfLayCommit(p.cx,wfSegOwn(p,dx,dy));
+  else if(p.kind==='seg'){const own=wfSegOwn(p,dx,dy);ui.wfSegSel=null;ui.wfBendAt=null;wfLayCommit(p.cx,own)}
   else if(p.kind==='zone')wfLayCommit(p.cx,wfZoneOwn(p,dx,true));
   else if(p.kind==='end'){const r=wfEndOwn(p,e);if(r&&r.ok)wfLayCommit(p.cx,r.own);else{wfRepaint(null);toast('The arrow end stays where it was: drop it on a side of its own block.')}}
   else if(p.kind==='conn'){const tg=document.elementFromPoint(e.clientX,e.clientY),n=tg&&tg.closest&&tg.closest('.wfd .wfn');const tmp=document.querySelector('.wfe-tmp');if(tmp)tmp.innerHTML='';if(n&&n.dataset.id!==p.from)wfAskLink(p.from,n.dataset.id)}
@@ -652,11 +662,92 @@ function wfSegOwn(p,dx,dy){
   if(!p.base){const {G,e}=wfEdgeNow(p.cx);if(!e)return wfOwnCopy(p.cx);let c=wfFullCoords(e),ci=wfCtrlOf(e,c,p.j);
     /* the first move after the start: two coordinates are added so that move gets its own line */
     if(p.j===1){c=[e.hz?e.S0.x:e.S0.y,e.hz?e.S0.y:e.S0.x,...c];ci=1}
-    p.base={G,e,c,ci}}
+    p.base={G,e,c,ci,snap:null}}
   const {G,e,c}=p.base,s=c.slice(),i=p.base.ci;if(i==null)return wfOwnCopy(p.cx);
-  const isX=(i%2===0)===e.hz;s[i]=Math.round(s[i]+(isX?dx:dy));
-  const own=wfOwnCopy(p.cx);own.e[ui.wfEdge]={...(own.e[ui.wfEdge]||{}),a:e.A,b:e.B,s:wfCoordsStore(e,s,G),f:wfFP(e,G)};return own;
+  const isX=(i%2===0)===e.hz,sn=wfSegSnap(p,isX,s[i]+(isX?dx:dy));s[i]=Math.round(sn.v);p.guides=sn.g;
+  /* bends that are no longer needed go away (two lines in line become one); the drag always starts from the
+     route as it was, so the simplification never jumps while dragging and is the same when dropped */
+  const own=wfOwnCopy(p.cx);own.e[ui.wfEdge]={...(own.e[ui.wfEdge]||{}),a:e.A,b:e.B,s:wfCoordsStore(e,wfRouteSimplify(e,s),G),f:wfFP(e,G)};return own;
 }
+/* ----- v1.9: segments snap like blocks; routes stay simple; bends are added and removed explicitly ----- */
+const wfEq=(a,b)=>Math.abs(a-b)<0.5;
+/* a polyline from the start (S0) to the end (E0) of the route, both kept: no repeated points, no zero-length
+   segments and no point in the middle of a straight line */
+function wfPolyNorm(M){
+  const q=[];M.forEach(p=>{const l=q[q.length-1];if(!l||!(wfEq(p[0],l[0])&&wfEq(p[1],l[1])))q.push([p[0],p[1]])});
+  for(let g=0;g<200;g++){let ch=false;
+    for(let i=1;i<q.length-1;i++){const a=q[i-1],b=q[i],c=q[i+1];if((wfEq(a[0],b[0])&&wfEq(b[0],c[0]))||(wfEq(a[1],b[1])&&wfEq(b[1],c[1]))){q.splice(i,1);ch=true;break}}
+    for(let i=1;!ch&&i<q.length;i++)if(wfEq(q[i][0],q[i-1][0])&&wfEq(q[i][1],q[i-1][1])){q.splice(i===q.length-1?i-1:i,1);ch=true}
+    if(!ch||q.length<3)break}
+  return q;
+}
+/* the stored form of a polyline: alternating coordinates after the start, the first on the axis of the start */
+function wfPolyCoords(q,hz){const out=[];let cur=q[0],h=hz;
+  for(let k=1;k<q.length;k++){const p=q[k],horiz=wfEq(p[1],cur[1]);if(horiz!==h){out.push(h?cur[0]:cur[1]);h=!h}out.push(h?p[0]:p[1]);h=!h;cur=p}
+  return out.map(v=>Math.round(v))}
+const wfCanon=(e,c)=>wfPolyNorm(wfRoutePts(e.S,e.S0,c,e.E0,e.E,e.hz).pts.slice(1,-1));
+/* the same drawing with the fewest coordinates: the manual detours that are still needed are kept as they are */
+function wfRouteSimplify(e,coords){
+  const key=x=>JSON.stringify(wfCanon(e,x).map(p=>p.map(Math.round)));let c=wfPolyCoords(wfCanon(e,coords),e.hz);const k0=key(c);
+  while(c.length&&key(c.slice(0,-1))===k0)c=c.slice(0,-1);
+  return c}
+/* what a dragged segment snaps to: the other segments and the ends of the same arrow first (aligning them removes
+   the bend between them), then the edges and centres of the blocks and the segments of other arrows (only visual:
+   two arrows are never joined). Tolerance in screen pixels, so it feels the same at every zoom. */
+function wfSegSnap(p,isX,v){
+  const {e,G}=p.base,z=wfZoom(),tol=WFL.SNAP/z,keepTol=(WFL.SNAP+1)/z,ax=isX?0:1,oa=1-ax,P=e.pts,{W,H}=WFL;
+  const segs=pts=>pts.slice(0,-1).map((a,j)=>[a,pts[j+1],j]).filter(([a,b])=>wfEq(a[ax],b[ax])&&!wfEq(a[oa],b[oa]));
+  const mine=p.j===1?[P[1],P[2]]:[P[p.j],P[p.j+1]],mlo=Math.min(mine[0][oa],mine[1][oa]),mhi=Math.max(mine[0][oa],mine[1][oa]);
+  const refs=[];
+  segs(P).forEach(([a,b,j])=>{if(j!==p.j)refs.push({v:a[ax],lo:Math.min(a[oa],b[oa]),hi:Math.max(a[oa],b[oa]),own:true})});
+  [e.S0,e.E0].forEach(q=>refs.push({v:isX?q.x:q.y,lo:isX?q.y:q.x,hi:isX?q.y:q.x,own:true}));
+  G.pos.forEach(q=>(isX?[q.x,q.x+W/2,q.x+W]:[q.y,q.y+H/2,q.y+H]).forEach(r=>refs.push({v:r,lo:isX?q.y:q.x,hi:isX?q.y+H:q.x+W})));
+  G.edges.forEach(o=>{if(o.k!==e.k)segs(o.pts.slice(1,-1)).forEach(([a,b])=>refs.push({v:a[ax],lo:Math.min(a[oa],b[oa]),hi:Math.max(a[oa],b[oa])}))});
+  let best=null;const cur=p.base.snap;
+  /* the same arrow first: when one of its lines is within reach it wins (that is what removes bends) */
+  for(const own of [true,false]){for(const r of refs){if(!!r.own!==own)continue;const d=Math.abs(r.v-v);if(d>tol)continue;if(!best||d<best.sc)best={...r,sc:d}}if(best)break}
+  /* stay on the current reference unless another one is clearly closer: no jumping between near lines */
+  if(cur&&Math.abs(cur.v-v)<=keepTol&&(!best||(cur.own&&!best.own)||(!!best.own===!!cur.own&&Math.abs(best.v-v)>Math.abs(cur.v-v)-2/z)))best=cur;
+  p.base.snap=best;if(!best)return {v,g:[]};
+  const a=Math.min(mlo,best.lo),b=Math.max(mhi,best.hi);
+  return {v:best.v,g:[{axis:isX?'x':'y',abs:true,seg:true,v:best.v,a,b}]};
+}
+/* the point of the arrow nearest to a click, and the segment it is on (in the S0 … E0 polyline) */
+function wfNearOnRoute(M,at){let best=null;
+  for(let j=0;j<M.length-1;j++){const a=M[j],b=M[j+1];if(wfEq(a[0],b[0])&&wfEq(a[1],b[1]))continue;const v=wfEq(a[0],b[0]),ax=v?1:0,lo=Math.min(a[ax],b[ax]),hi=Math.max(a[ax],b[ax]),t=Math.max(lo,Math.min(hi,ax?at.y:at.x)),q=v?[a[0],t]:[t,a[1]],d=Math.hypot(q[0]-at.x,q[1]-at.y);
+    if(!best||d<best.d)best={j,q,d}}
+  return best}
+/* Add bend: a detour (two new lines and a parallel one) at the clicked point; it goes to the side that crosses no
+   block and every new line gets its own handle. No diagonals; the ends stay on their blocks. */
+function wfBendAdd(cx,at){
+  const {G,e:E}=wfEdgeNow(cx);if(!E||!at)return false;const M=E.pts.slice(1,-1),hit=wfNearOnRoute(M,at);if(!hit){toast('Click a point on the selected line first.');return false}
+  const a=M[hit.j],b=M[hit.j+1],v=wfEq(a[0],b[0]),ax=v?1:0,sg=Math.sign(b[ax]-a[ax])||1,len=Math.abs(b[ax]-a[ax]);
+  let m=hit.q[ax],half=Math.min(36,Math.abs(m-a[ax])-6,Math.abs(b[ax]-m)-6);
+  if(half<10){m=(a[ax]+b[ax])/2;half=Math.min(36,len/2-6)}
+  if(half<10){toast('This part of the line is too short for a bend: pick a longer part or drag it longer first.');return false}
+  const pt=(along,off)=>v?[a[0]+off,along]:[along,a[1]+off];
+  const build=off=>[...M.slice(0,hit.j+1),pt(m-sg*half,0),pt(m-sg*half,off),pt(m+sg*half,off),pt(m+sg*half,0),...M.slice(hit.j+1)];
+  const rects=[...G.pos.entries()].map(([id,q])=>({id,...q}));let poly=null,off0=32;
+  for(const off of [32,-32,56,-56,88,-88]){const q=build(off);if(!wfCrosses([E.S,...q,E.E],rects,[E.a,E.b])){poly=q;off0=off;break}}
+  if(!poly)poly=build(off0);
+  const c=wfRouteSimplify(E,wfPolyCoords(wfPolyNorm(poly),E.hz)),np=wfRoutePts(E.S,E.S0,c,E.E0,E.E,E.hz).pts,p2=pt(m-sg*half,off0),p3=pt(m+sg*half,off0);
+  const j=np.findIndex((q,i)=>i<np.length-1&&wfEq(q[0],p2[0])&&wfEq(q[1],p2[1])&&wfEq(np[i+1][0],p3[0])&&wfEq(np[i+1][1],p3[1]));
+  ui.wfBendAt=null;ui.wfSegSel=j>0?{k:E.k,j}:null;
+  const own=wfOwnCopy(cx);own.e[ui.wfEdge]={...(own.e[ui.wfEdge]||{}),a:E.A,b:E.B,s:wfCoordsStore(E,c,G),f:wfFP(E,G)};wfLayCommit(cx,own);return true;
+}
+/* Remove bend: the selected line goes away and its neighbours are joined, when the route stays valid */
+function wfBendRemove(cx,j){
+  const {G,e:E}=wfEdgeNow(cx);if(!E)return false;const c=wfFullCoords(E),i=j===1?null:wfCtrlOf(E,c,j);
+  if(i==null||c.length<2){toast('There is no bend to remove there.');return false}
+  const n=c.slice();if(i+1<n.length)n.splice(i,2);else n.splice(i-1,2);
+  const s=wfRouteSimplify(E,n),rects=[...G.pos.entries()].map(([id,q])=>({id,...q}));
+  if(wfCrosses(wfRoutePts(E.S,E.S0,s,E.E0,E.E,E.hz).pts,rects,[E.a,E.b])&&!wfCrosses(E.pts,rects,[E.a,E.b])){toast('Removing this bend would take the line across a block. Move the segment instead.');return false}
+  if(JSON.stringify(wfCanon(E,s))===JSON.stringify(wfCanon(E,wfFullCoords(E)))){toast('There is no bend to remove there.');return false}
+  ui.wfSegSel=null;ui.wfBendAt=null;
+  const own=wfOwnCopy(cx);own.e[ui.wfEdge]={...(own.e[ui.wfEdge]||{}),a:E.A,b:E.B,s:wfCoordsStore(E,s,G),f:wfFP(E,G)};wfLayCommit(cx,own);return true;
+}
+/* only the bar is redrawn (the diagram keeps its elements, so a double-click still reaches them) */
+function wfBarRefresh(){const D=ui.wfDia;if(!D||!D.G)return;const cx=wfLayCtx(D.o.ctx),bar=document.querySelector('.wflay-bar');if(cx&&bar){const t=document.createElement('div');t.innerHTML=wfLayBar(cx,D.G);bar.replaceWith(t.firstElementChild)}}
 /* the route with its finishing moves written out, so every middle segment is controlled by one coordinate */
 function wfFullCoords(e){const p=e.pts,c=[];let h=e.hz;for(let j=2;j<p.length-2;j++){c.push(h?p[j][0]:p[j][1]);h=!h}return c}
 function wfCtrlOf(e,c,j){/* segment j starts at point j; with full coords point j (j≥2) comes from coordinate j-2 */return j>=2&&j-2<c.length?j-2:null}
@@ -674,15 +765,11 @@ function wfEndOwn(p,ev){
 }
 document.addEventListener('dblclick',e=>{if(!(e.target.closest&&e.target.closest('.wfd')))return;const cx=wfCurCtx();if(!cx||!cx.canEdit)return;
   const h=e.target.closest('.wfh'),hitE=e.target.closest('.wfe-hit');if(!h&&!hitE)return;e.preventDefault();
-  if(hitE)ui.wfEdge=hitE.dataset.wfe;const {G,e:E}=wfEdgeNow(cx);if(!E)return;const c=wfFullCoords(E);
-  if(h){const i=+h.dataset.wfseg===1?null:wfCtrlOf(E,c,+h.dataset.wfseg);if(i==null||c.length<3){toast('This arrow has no bend to remove there.');return}if(i+1<c.length)c.splice(i,2);else c.splice(i-1,2)}
-  else{const L=wfLocal(e),C=[L.x,L.y],pts=E.pts;let best=-1,bd=Infinity;
-    for(let j=1;j<pts.length-2;j++){const [x1,y1]=pts[j],[x2,y2]=pts[j+1],d=x1===x2?Math.abs(C[0]-x1)+Math.max(0,Math.min(y1,y2)-C[1],C[1]-Math.max(y1,y2)):Math.abs(C[1]-y1)+Math.max(0,Math.min(x1,x2)-C[0],C[0]-Math.max(x1,x2));if(d<bd){bd=d;best=j}}
-    if(best<1)return;
-    if(best===1)c.splice(0,0,...(E.hz?[Math.round(C[0]),E.S0.y]:[Math.round(C[1]),E.S0.x]));          // first move after the start
-    else{const i=best-2,isX=(i%2===0)===E.hz;c.splice(i+1,0,isX?Math.round(C[1]):Math.round(C[0]),c[i])}   // split: line, cross value, line
-  }
-  const own=wfOwnCopy(cx);own.e[ui.wfEdge]={...(own.e[ui.wfEdge]||{}),a:E.A,b:E.B,s:wfCoordsStore(E,c,G),f:wfFP(E,G)};wfLayCommit(cx,own);
+  if(h){wfBendRemove(cx,+h.dataset.wfseg);return}
+  /* where several lines overlap, quick clicks choose the line (each click selects the next): no bend is added there */
+  const under=[...new Set(document.elementsFromPoint(e.clientX,e.clientY).filter(x=>x.classList&&x.classList.contains('wfe-hit')).map(x=>x.dataset.wfe))];
+  if(under.length>1){toast('Several lines pass here: select the one you want, click its point and use Add bend.');return}
+  ui.wfEdge=hitE.dataset.wfe;wfBendAdd(cx,wfLocal(e));   // double-click on the line = Add bend at that point
 },true);
 
 /* ----- live preview: positions, lanes, separator, arrows and guides are updated in place ----- */
@@ -699,7 +786,7 @@ function wfRepaint(own,p,guides,hl){
   if(p&&p.kind==='node'){if(p.limitOn){const zb=box.querySelector(`.wfzb[data-zb="${p.limZ}"]`);if(zb){zb.classList.add('limit');zb.dataset.why=`${['Inputs','Actions','Outputs'][(p.limZ-1)%3]} end here`}}
     (p.overlap||[]).forEach(id=>{const el=document.getElementById('wfn-'+id);el&&el.classList.add('overlap')})}
   const gb=box.querySelector('.wfgrpbox');if(gb)gb.innerHTML=wfGroupHTML(G);
-  const gl=box.querySelector('.wfguides');if(gl)gl.innerHTML=(guides||[]).map(x=>x.axis==='x'?`<i class="wfg v" style="left:${Math.round(x.v)}px;top:${Math.round(x.a)-8}px;height:${Math.round(x.b-x.a)+16}px"></i>`:(()=>{const b=G.bandOf.get(x.lane);return b?`<i class="wfg h" style="top:${Math.round(b.y+x.v)}px;left:${Math.round(x.a)-8}px;width:${Math.round(x.b-x.a)+16}px"></i>`:''})()).join('');
+  const gl=box.querySelector('.wfguides');if(gl)gl.innerHTML=(guides||[]).map(x=>x.abs&&x.axis==='y'?`<i class="wfg h${x.seg?' seg':''}" style="top:${Math.round(x.v)}px;left:${Math.round(x.a)-8}px;width:${Math.round(x.b-x.a)+16}px"></i>`:x.axis==='x'?`<i class="wfg v${x.seg?' seg':''}" style="left:${Math.round(x.v)}px;top:${Math.round(x.a)-8}px;height:${Math.round(x.b-x.a)+16}px"></i>`:(()=>{const b=G.bandOf.get(x.lane);return b?`<i class="wfg h" style="top:${Math.round(b.y+x.v)}px;left:${Math.round(x.a)-8}px;width:${Math.round(x.b-x.a)+16}px"></i>`:''})()).join('');
   const bar=document.querySelector('.wflay-bar');if(bar&&!p){const t=document.createElement('div');t.innerHTML=wfLayBar(cx,G);bar.replaceWith(t.firstElementChild)}
   D.G=G;wfFill();
 }
@@ -783,8 +870,8 @@ function wfFixOrder(dr,ph){
    filters exclude it are not touched; views without a saved layout simply show it. hint = visible area of the current view */
 function wfPlaceInViews(dr,s,hint){
   const phs=wfPhOrder(dr.steps.filter(x=>!x.retired).map(x=>x.phaseId));
-  Object.keys(dr.layout||{}).forEach(k=>{const base=wfKeyBase(k),sp=wfKeySpecs(k),ty=wfKeyTypes(k),L=dr.layout[k];
-    if(base!==s.phaseId&&base!=='_global')return;if(sp&&!sp.includes(wfSpecOf(s)))return;if(ty&&!ty.includes(wfType(s)))return;if(!L||!L.n||!Object.keys(L.n).length)return;
+  Object.keys(dr.layout||{}).forEach(k=>{const base=wfKeyBase(k),sp=wfKeySpecs(k),ty=wfKeyTypes(k),rk=wfKeyResp(k),L=dr.layout[k];
+    if(base!==s.phaseId&&base!=='_global')return;if(sp&&!sp.includes(wfSpecOf(s)))return;if(ty&&!ty.includes(wfType(s)))return;if(rk&&!wfInRespStd(s,rk))return;if(!L||!L.n||!Object.keys(L.n).length)return;
     delete L.n[s.id];
     const g=base==='_global'?wfStdNodesAll(dr,phs,sp,ty):wfStdNodes(dr,base,sp,ty);if(!g.nodes.some(n=>n.id===s.id))return;
     const o={mode:'std',std:dr,phases:base==='_global'?wfPhOrder(g.nodes.map(n=>n.ph)):null};

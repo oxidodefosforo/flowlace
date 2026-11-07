@@ -140,14 +140,17 @@ module.exports = async function run() {
     assert.strictEqual(stepOf(dec).type, 'normal', 'type changes are data (Undo restores layout and dependencies only)');
   });
 
-  await step('type filter: independent of category, specialty and phase; its own view', async () => {
-    await w.click('[data-act=wf-stype][data-v=decision]'); await H.sleep(150); await w.click('[data-act=wf-stype][data-v=qa]'); await H.sleep(250);
+  await step('v1.9: no type filter; types and shapes stay, also in a view filtered by Responsible (its own view)', async () => {
+    assert.strictEqual(await w.$('[data-act=wf-stype]'), null, 'the Types row is gone');
+    await w.click('.wfrp-btn'); await w.click('.wfrp-o[data-v="ro-qa"]'); await H.sleep(250); await w.keyboard.press('Escape');
     const ids = await T.ids(), st = draft().steps;
-    const own = ids.filter(id => { const s = st.find(x => x.id === id); return s && (s.type === 'decision' || s.type === 'qa'); });
-    assert.ok(own.includes('el-dec') && own.includes('co-qa') && !ids.includes('el-ac3'), 'only Decision / QA (plus what they need, as references): ' + ids);
+    for (const id of ids) if (!/\bref\b/.test(await cls(id))) assert.ok(st.find(s => s.id === id).roleIds.includes('ro-qa'), 'QA role only (plus what it needs, as references): ' + id);
+    assert.ok(ids.includes('co-qa') && !ids.includes('el-dec'), 'QA shown, a Decision of another role hidden: ' + ids);
+    assert.ok(/sh-diamond/.test(await cls('co-qa')) && /t-qa/.test(await cls('co-qa')), 'QA keeps its shape');
+    assert.deepStrictEqual(st.find(s => s.id === 'co-qa').branches, { yes: 'co-issue', no: 'co-fix' }, 'outlets kept');
     await drag('co-qa', 0, 30); await H.saved(w);
-    assert.ok(Object.keys(draft().layout).some(k => /\^decision\+qa$/.test(k)), 'stored as its own view: ' + Object.keys(draft().layout));
-    await w.click('[data-act=wf-stype][data-v=_all]'); await H.sleep(250);
+    assert.ok(Object.keys(draft().layout).some(k => /@ro-qa$/.test(k)), 'stored as its own view: ' + Object.keys(draft().layout));
+    await w.click('.wfrp-x'); await H.sleep(250);
   });
 
   await step('A does not drag C, B does not block A; A + C move together with B fixed; A + B + C as a block; one Undo', async () => {

@@ -73,9 +73,6 @@ module.exports = async function run() {
     assert.deepStrictEqual((await screen())['el-ac2'], p0, 'same place');
     assert.ok(/sh-para/.test(await cls('el-ac2')) && /c-action/.test(await cls('el-ac2')), 'blue parallelogram');
     assert.ok(/Information: parallelogram, action colour/.test(await w.textContent('#wfc-el-ac2')), 'help text and preview');
-    await w.click('[data-act=wf-stype][data-v=info]'); await H.sleep(250);
-    const ids = await T.ids(); assert.ok(ids.includes('el-ac2') && ids.includes('fi-in') && !ids.includes('me-in1'), 'type filter: Information only (+ references): ' + ids);
-    await w.click('[data-act=wf-stype][data-v=_all]'); await H.sleep(250);
     // the arrow reaches the slanted side: drawn shape, clickable area and anchors use the same outline
     const P = (await pts('el-ac2>el-out1'))[0], b = (await screen())['el-ac2'];
     assert.ok(P[0] < b[0] + W && P[0] >= b[0] + W - 15, 'the arrow leaves from the slanted right side: ' + P);
